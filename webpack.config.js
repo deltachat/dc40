@@ -1,4 +1,5 @@
 const path = require('path');
+const MiniCssExtractPlugin = require('mini-css-extract-plugin');
 const HtmlWebpackPlugin = require('html-webpack-plugin')
 
 module.exports = {
@@ -19,7 +20,12 @@ module.exports = {
       {
         test: /\.less$/,
         use: [
-          { loader: 'style-loader' },
+          {
+            loader: MiniCssExtractPlugin.loader,
+            options: {
+              publicPath: '/',
+            },
+          },
           { loader: 'css-loader' },
           {
             loader: 'less-loader',
@@ -32,7 +38,12 @@ module.exports = {
       {
         test: /\.css$/,
         use: [
-          { loader: 'style-loader' },
+          {
+            loader: MiniCssExtractPlugin.loader,
+            options: {
+              publicPath: '/',
+            },
+          },
           { loader: 'css-loader' },
         ],
       },
@@ -57,7 +68,11 @@ module.exports = {
       title: 'delta.chat',
       filename: 'index.html',
       template: 'index.html'
-    })
+    }),
+     new MiniCssExtractPlugin({
+      filename: '[name].css',
+      chunkFilename: '[id].css',
+    }),
   ],
   resolve: {
     alias: {
