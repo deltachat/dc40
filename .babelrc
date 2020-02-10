@@ -1,8 +1,17 @@
 {
-  "presets": ["env", "react"],
+  "presets": [
+    [
+      "@babel/preset-env",
+      {
+        "targets": {
+          "esmodules": false
+        }
+      }
+    ],
+    ["@babel/preset-react"]
+  ],
   "plugins": [
-    "transform-object-rest-spread",
-    "transform-react-jsx",
-    "transform-class-properties"
+    ["@babel/plugin-proposal-class-properties"],
+    ["react-hot-loader/babel"]
   ]
 }

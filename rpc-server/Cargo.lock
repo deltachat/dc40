@@ -54,25 +54,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7825f6833612eb2414095684fcf6c635becf3ce97fe48cf6421321e93bfbd53c"
 
 [[package]]
-name = "app-rpc"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "async-std",
- "async-tungstenite",
- "broadcaster",
- "deltachat",
- "dirs",
- "femme",
- "futures",
- "glob 0.3.0",
- "lazy_static",
- "log",
- "serde",
- "serde_json",
-]
-
-[[package]]
 name = "arrayref"
 version = "0.3.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -726,6 +707,25 @@ dependencies = [
  "darling_core",
  "quote 1.0.2",
  "syn 1.0.14",
+]
+
+[[package]]
+name = "dc-next-rpc-server"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-std",
+ "async-tungstenite",
+ "broadcaster",
+ "deltachat",
+ "dirs",
+ "femme",
+ "futures",
+ "glob 0.3.0",
+ "lazy_static",
+ "log",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]

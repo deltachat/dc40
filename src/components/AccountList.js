@@ -1,69 +1,72 @@
-import React from 'react';
-import { connect } from 'react-redux';
-import ReactModal from 'react-modal'
-import { Icon } from 'react-icons-kit'
-import { plusSmall } from 'react-icons-kit/oct/plusSmall'
+import React from "react";
+import { connect } from "react-redux";
+import ReactModal from "react-modal";
+import { Icon } from "react-icons-kit";
+import { plusSmall } from "react-icons-kit/oct/plusSmall";
 
-import Login from './login'
+import Login from "./login";
 
 class AccountList extends React.Component {
   constructor(props) {
-    super(props)
+    super(props);
 
     this.state = {
-      email: '',
-      password: '',
+      email: "",
+      password: "",
       showAddAccount: false
-    }
+    };
   }
-  
+
   handleOpenModal = () => {
     this.setState({ showAddAccount: true });
-  }
-  
+  };
+
   handleCloseModal = () => {
     this.setState({ showAddAccount: false });
-  }
+  };
 
-  onAccountClick = (event) => {
+  onAccountClick = event => {
     // TODO: select account
-  }
+  };
 
   render() {
-    let { accounts, selected_account } = this.props
+    let { accounts, selected_account } = this.props;
 
     return (
       <div className="account-list">
-        {accounts.map(
-          (account) =>
-            <div className="account"
-          key={account.email}
-          onClick={this.onAccountClick}
-            >
+        {accounts.map(account => (
+          <div
+            className="account"
+            key={account.email}
+            onClick={this.onAccountClick}
+          >
             <div className="letter-icon">{account.email[0]}</div>
-            </div>
-        )
-        }
+          </div>
+        ))}
 
-        <a className="account button" onClick={this.handleOpenModal} alt="Add Account">
-        <Icon icon={plusSmall} size={32} />
+        <a
+          className="account button"
+          onClick={this.handleOpenModal}
+          alt="Add Account"
+        >
+          <Icon icon={plusSmall} size={32} />
         </a>
 
-        <ReactModal 
-           isOpen={this.state.showAddAccount}
-           contentLabel="Add Account"
+        <ReactModal
+          isOpen={this.state.showAddAccount}
+          contentLabel="Add Account"
         >
-        <Login onSubmit={this.handleCloseModal} onCancel={this.handleCloseModal} />
+          <Login
+            onSubmit={this.handleCloseModal}
+            onCancel={this.handleCloseModal}
+          />
         </ReactModal>
-
-
-      
       </div>
-    )
+    );
   }
 }
 
-const mapStateToProps = (state) => ({
+const mapStateToProps = state => ({
   accounts: Object.values(state.shared.accounts),
   selected_account: state.shared.selected_account
 });
