@@ -4,8 +4,8 @@
   "description": "delta.chat next desktop",
   "main": "src/electron.js",
   "scripts": {
-    "react-start": "npx webpack-dev-server --mode development --config webpack.config.js",
-    "react-build": "npx webpack --mode production --config webpack.config.js",
+    "react-start": "npx webpack-dev-server --config webpack.dev.js",
+    "react-build": "npx webpack --config webpack.prod.js",
     "electron-build": "electron-builder -mwl",
     "clean-build": "rm -rf build/ .cache dist/",
     "build": "npm run clean-build && npm run react-build && npm run electron-build",
@@ -14,11 +14,11 @@
   },
   "bundlesize": [
     {
-      "path": "./build/src.*.js",
+      "path": "./build/main*.js",
       "maxSize": "250 kB"
     },
     {
-      "path": "./build/src.*.css",
+      "path": "./build/*.css",
       "maxSize": "100 kB"
     }
   ],
@@ -73,6 +73,7 @@
     "@babel/preset-react": "^7.8.3",
     "@hot-loader/react-dom": "^16.11.0",
     "babel-loader": "^8.0.6",
+    "babel-minify-webpack-plugin": "^0.3.1",
     "bundlesize": "^0.18.0",
     "concurrently": "^5.0.2",
     "cross-env": "7.0.0",
@@ -91,7 +92,8 @@
     "wait-on": "4.0.0",
     "webpack": "^4.41.5",
     "webpack-cli": "^3.3.10",
-    "webpack-dev-server": "^3.10.3"
+    "webpack-dev-server": "^3.10.3",
+    "webpack-merge": "^4.2.2"
   },
   "prettier": {
     "excludeFiles": [

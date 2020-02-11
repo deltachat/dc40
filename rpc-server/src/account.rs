@@ -1,6 +1,6 @@
 use async_std::prelude::*;
 
-use anyhow::{anyhow, bail, Result};
+use anyhow::{anyhow, bail, ensure, Result};
 use async_std::sync::{Arc, RwLock};
 use async_std::task;
 use async_tungstenite::tungstenite::Error;
@@ -42,14 +42,21 @@ pub struct Account {
     smtp_handle: Option<std::thread::JoinHandle<()>>,
 }
 
-#[derive(Default, Debug, Serialize, Clone, Deserialize)]
+#[derive(Debug)]
 pub struct AccountState {
-    logged_in: Login,
-    email: String,
-    chat_states: HashMap<ChatId, ChatState>,
-    selected_chat: Option<ChatId>,
-    selected_chat_msgs: Vec<ChatMessage>,
-    chats: HashMap<ChatId, Chat>,
+    pub logged_in: Login,
+    pub email: String,
+    pub chat_states: HashMap<usize, ChatState>,
+    pub selected_chat: Option<ChatState>,
+    pub selected_chat_id: Option<ChatId>,
+    pub chatlist: Chatlist,
+    /// Messages of the selected chat
+    pub chat_msg_ids: Vec<MsgId>,
+    /// State of currently selected chat messages
+    pub chat_msgs: HashMap<usize, ChatMessage>,
+    chat_msgs_range: (usize, usize),
+    /// indexed by index in the Chatlist
+    pub chats: HashMap<ChatId, Chat>,
 }
 
 #[derive(Default, Debug, Serialize, Clone, Deserialize)]
@@ -69,6 +76,7 @@ pub struct ChatMessage {
 #[derive(Default, Debug, Serialize, Clone, Deserialize)]
 pub struct ChatState {
     id: ChatId,
+    name: String,
     header: String,
     preview: String,
     timestamp: i64,
@@ -153,14 +161,26 @@ impl Account {
         })
         .await?;
 
+        let context = Arc::new(context);
+        let ctx = context.clone();
+        let chatlist = task::spawn_blocking(move || {
+            Chatlist::try_load(&ctx, 0, None, None)
+                .map_err(|err| anyhow!("failed to load chats: {:?}", err))
+        })
+        .await?;
+
         let mut account = Account {
-            context: Arc::new(context),
+            context,
             state: Arc::new(RwLock::new(AccountState {
                 logged_in: Login::default(),
                 email: email.to_string(),
                 chats: Default::default(),
                 selected_chat: None,
-                selected_chat_msgs: Default::default(),
+                selected_chat_id: None,
+                chatlist,
+                chat_msgs_range: (0, 0),
+                chat_msg_ids: Default::default(),
+                chat_msgs: Default::default(),
                 chat_states: Default::default(),
             })),
             imap_handle: None,
@@ -301,19 +321,20 @@ impl Account {
         Ok(())
     }
 
-    pub async fn load_chats(&self) -> Result<()> {
-        let ctx = self.context.clone();
-        let chats = task::spawn_blocking(move || {
-            Chatlist::try_load(&ctx, 0, None, None)
-                .map_err(|err| anyhow!("failed to load chats: {:?}", err))
-        })
-        .await?;
+    pub async fn load_chat_list(&self, start_index: usize, stop_index: usize) -> Result<()> {
+        ensure!(start_index <= stop_index, "invalid indicies");
+        self.state.write().await.chat_states.clear();
 
-        let futures = (0..chats.len())
-            .map(|i| {
-                let chat_id = chats.get_chat_id(i);
-                refresh_chat_state(self.context.clone(), self.state.clone(), chat_id)
-            })
+        let ids = {
+            let chatlist = &self.state.read().await.chatlist;
+            (start_index..=stop_index)
+                .map(|i| chatlist.get_chat_id(i))
+                .collect::<Vec<_>>()
+        };
+
+        let futures = ids
+            .into_iter()
+            .map(|chat_id| refresh_chat_state(self.context.clone(), self.state.clone(), chat_id))
             .collect::<Vec<_>>();
 
         futures::future::try_join_all(futures).await?;
@@ -324,46 +345,43 @@ impl Account {
     pub async fn select_chat(&self, chat_id: ChatId) -> Result<()> {
         info!("selecting chat {:?}", chat_id);
         let mut ls = self.state.write().await;
-        ls.selected_chat = Some(chat_id);
-        ls.selected_chat_msgs = Default::default();
+        ls.selected_chat_id = Some(chat_id);
+        ls.chat_msg_ids = chat::get_chat_msgs(&self.context, chat_id, 0, None);
+        ls.chat_msgs = Default::default();
+
+        let chat = Chat::load_from_db(&self.context, chat_id)
+            .map_err(|err| anyhow!("failed to load chats: {:?}", err))?;
+
+        if let Some(index) = ls.chatlist.get_index_for_id(chat_id) {
+            let lot = ls.chatlist.get_summary(&self.context, index, Some(&chat));
+            let header = lot.get_text1().map(|s| s.to_string()).unwrap_or_default();
+            let preview = lot.get_text2().map(|s| s.to_string()).unwrap_or_default();
+
+            let chat_state = ChatState {
+                id: chat_id,
+                name: chat.get_name().to_string(),
+                header,
+                preview,
+                timestamp: lot.get_timestamp(),
+                state: lot.get_state().to_string(),
+                profile_image: chat.get_profile_image(&self.context),
+            };
+
+            ls.selected_chat = Some(chat_state);
+        }
 
         Ok(())
     }
 
-    pub async fn load_selected_chat(&self) -> Result<()> {
-        let chat_id = self.state.read().await.selected_chat.clone();
-        info!("loading chat messages {:?}", chat_id);
-
-        if let Some(chat_id) = chat_id {
-            let mut messages = Vec::new();
-
-            // TODO: wrap in spawn_blocking
-            for msg_id in chat::get_chat_msgs(&self.context, chat_id, 0, None).into_iter() {
-                let msg = message::Message::load_from_db(&self.context, msg_id)
-                    .map_err(|err| anyhow!("failed to load msg: {}: {}", msg_id, err))?;
-
-                let from =
-                    Contact::load_from_db(&self.context, msg.get_from_id()).map_err(|err| {
-                        anyhow!("failed to load contact: {}: {}", msg.get_from_id(), err)
-                    })?;
-
-                let chat_msg = ChatMessage {
-                    id: msg.get_id(),
-                    viewtype: msg.get_viewtype(),
-                    from_first_name: from.get_first_name().to_string(),
-                    from_profile_image: from.get_profile_image(&self.context),
-                    from_color: from.get_color(),
-                    starred: msg.is_starred(),
-                    state: msg.get_state(),
-                    text: msg.get_text(),
-                    timestamp: msg.get_sort_timestamp(),
-                    is_info: msg.is_info(),
-                };
-                messages.push(chat_msg);
-            }
-
-            self.state.write().await.selected_chat_msgs = messages;
+    pub async fn load_message_list(&self, start_index: usize, stop_index: usize) -> Result<()> {
+        ensure!(start_index <= stop_index, "invalid indicies");
+        {
+            let mut ls = self.state.write().await;
+            ls.chat_msgs_range = (start_index, stop_index);
         }
+
+        refresh_message_list(self.context.clone(), self.state.clone(), None).await?;
+
         Ok(())
     }
 
@@ -413,9 +431,17 @@ impl Account {
                     | Event::MsgRead { chat_id, .. }
                     | Event::MsgFailed { chat_id, .. }
                     | Event::ChatModified(chat_id) => {
-                        if let Err(err) =
-                            refresh_chat_state(context.clone(), state.clone(), chat_id).await
-                        {
+                        let res =
+                            refresh_message_list(context.clone(), state.clone(), Some(chat_id))
+                                .try_join(refresh_chat_list(context.clone(), state.clone()))
+                                .try_join(refresh_chat_state(
+                                    context.clone(),
+                                    state.clone(),
+                                    chat_id,
+                                ))
+                                .await;
+
+                        if let Err(err) = res {
                             Err(err)
                         } else {
                             let local_state = local_state.read().await;
@@ -470,8 +496,8 @@ pub async fn refresh_chat_state(
 ) -> Result<()> {
     info!("refreshing chat state: {:?}", &chat_id);
 
-    let chats = Chatlist::try_load(&context, 0, None, None)
-        .map_err(|err| anyhow!("failed to load chats: {:?}", err))?;
+    let mut state = state.write().await;
+    let chats = &state.chatlist;
     let chat = Chat::load_from_db(&context, chat_id)
         .map_err(|err| anyhow!("failed to load chats: {:?}", err))?;
 
@@ -483,6 +509,7 @@ pub async fn refresh_chat_state(
 
         let chat_state = ChatState {
             id: chat_id,
+            name: chat.get_name().to_string(),
             header,
             preview,
             timestamp: lot.get_timestamp(),
@@ -490,11 +517,78 @@ pub async fn refresh_chat_state(
             profile_image: chat.get_profile_image(&context),
         };
 
-        let mut state = state.write().await;
-        state.chat_states.insert(chat_id, chat_state);
+        state.chat_states.insert(index, chat_state);
     }
 
-    state.write().await.chats.insert(chat_id, chat);
+    state.chats.insert(chat_id, chat);
+
+    Ok(())
+}
+
+pub async fn refresh_chat_list(
+    context: Arc<Context>,
+    state: Arc<RwLock<AccountState>>,
+) -> Result<()> {
+    let chatlist = task::spawn_blocking(move || {
+        Chatlist::try_load(&context, 0, None, None)
+            .map_err(|err| anyhow!("failed to load chats: {:?}", err))
+    })
+    .await?;
+
+    std::mem::replace(&mut state.write().await.chatlist, chatlist);
+
+    Ok(())
+}
+
+pub async fn refresh_message_list(
+    context: Arc<Context>,
+    state: Arc<RwLock<AccountState>>,
+    chat_id: Option<ChatId>,
+) -> Result<()> {
+    let mut ls = state.write().await;
+    let current_chat_id = ls.selected_chat_id.clone();
+    if chat_id.is_some() && current_chat_id != chat_id {
+        return Ok(());
+    }
+
+    let (start_index, stop_index) = ls.chat_msgs_range;
+    info!(
+        "loading chat messages {:?} - {}..{}",
+        chat_id, start_index, stop_index
+    );
+
+    ls.chat_msg_ids = chat::get_chat_msgs(&context, current_chat_id.unwrap(), 0, None);
+
+    // TODO: wrap in spawn_blocking
+    let msgs = ls
+        .chat_msg_ids
+        .iter()
+        .enumerate()
+        .skip(start_index)
+        .take(stop_index - start_index + 1)
+        .map(|(i, msg_id)| {
+            let msg = message::Message::load_from_db(&context, *msg_id)
+                .map_err(|err| anyhow!("failed to load msg: {}: {}", msg_id, err))?;
+
+            let from = Contact::load_from_db(&context, msg.get_from_id())
+                .map_err(|err| anyhow!("failed to load contact: {}: {}", msg.get_from_id(), err))?;
+
+            let chat_msg = ChatMessage {
+                id: msg.get_id(),
+                viewtype: msg.get_viewtype(),
+                from_first_name: from.get_first_name().to_string(),
+                from_profile_image: from.get_profile_image(&context),
+                from_color: from.get_color(),
+                starred: msg.is_starred(),
+                state: msg.get_state(),
+                text: msg.get_text(),
+                timestamp: msg.get_sort_timestamp(),
+                is_info: msg.is_info(),
+            };
+            Ok((i, chat_msg))
+        })
+        .collect::<Result<_>>()?;
+    std::mem::replace(&mut ls.chat_msgs, msgs);
 
     Ok(())
 }

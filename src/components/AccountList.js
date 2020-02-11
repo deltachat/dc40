@@ -4,6 +4,7 @@ import ReactModal from "react-modal";
 import { Icon } from "react-icons-kit";
 import { plusSmall } from "react-icons-kit/oct/plusSmall";
 
+import { selectAccount } from "../redux";
 import Login from "./login";
 
 class AccountList extends React.Component {
@@ -25,9 +26,10 @@ class AccountList extends React.Component {
     this.setState({ showAddAccount: false });
   };
 
-  onAccountClick = event => {
-    // TODO: select account
-  };
+  onAccountClick(email, event) {
+    event.preventDefault();
+    this.props.selectAccount(this.props.selected_account, email);
+  }
 
   render() {
     let { accounts, selected_account } = this.props;
@@ -38,7 +40,7 @@ class AccountList extends React.Component {
           <div
             className="account"
             key={account.email}
-            onClick={this.onAccountClick}
+            onClick={this.onAccountClick.bind(this, account.email)}
           >
             <div className="letter-icon">{account.email[0]}</div>
           </div>
@@ -71,6 +73,8 @@ const mapStateToProps = state => ({
   selected_account: state.shared.selected_account
 });
 
-const mapDispatchToProps = {};
+const mapDispatchToProps = {
+  selectAccount
+};
 
 export default connect(mapStateToProps, mapDispatchToProps)(AccountList);

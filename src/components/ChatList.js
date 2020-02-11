@@ -1,8 +1,8 @@
 import React from "react";
 import { connect } from "react-redux";
-import { List, AutoSizer } from "react-virtualized";
+import { InfiniteLoader, List, AutoSizer } from "react-virtualized";
 
-import { selectChat } from "../redux/index";
+import { selectChat, loadChatList } from "../redux/index";
 
 class ChatList extends React.Component {
   constructor(props) {
@@ -16,25 +16,27 @@ class ChatList extends React.Component {
 
   onChatClick(id, event) {
     event.preventDefault();
-    this.props.selectChat(this.props.selectedAccount, id);
+    if (this.props.selectedChatId != id) {
+      this.props.selectChat(this.props.selectedAccount, id);
+    }
   }
 
   rowRenderer = ({ index, isScrolling, isVisible, key, parent, style }) => {
-    const { account, selectedChat } = this.props;
-    if (account == null) {
+    const { selectedAccount, selectedChatId, chats } = this.props;
+    const chat = chats[index];
+
+    if (selectedAccount == null || chat == null) {
       return <div key={key} style={style}></div>;
     }
 
-    const id = Object.keys(account.chat_states)[index];
-    const chat_state = account.chat_states[id];
-    const chat = account.chats[id];
+    const id = chat.id;
 
     let image = <div className="letter-icon">{chat.name[0]}</div>;
-    if (chat_state.profile_image != null) {
+    if (chat.profile_image != null) {
       image = (
         <img
           className="image-icon"
-          src={"dc://" + chat_state.profile_image}
+          src={"dc://" + chat.profile_image}
           alt="chat avatar"
         />
       );
@@ -42,7 +44,7 @@ class ChatList extends React.Component {
 
     let className = "chat-list-item";
 
-    if (selectedChat === parseInt(id, 10)) {
+    if (selectedChatId === parseInt(id, 10)) {
       className += " active";
     }
 
@@ -56,37 +58,51 @@ class ChatList extends React.Component {
         <div className="chat-icon">{image}</div>
         <div className="chat-content">
           <div className="chat-header">{chat.name}</div>
-          <div className="chat-preview">{chat_state.preview}</div>
+          <div className="chat-preview">{chat.preview}</div>
         </div>
       </div>
     );
   };
 
-  render() {
-    let { account } = this.props;
+  isRowLoaded = ({ index }) => {
+    !!this.props.chats[index];
+  };
 
-    if (account == null) {
+  loadMoreRows = ({ startIndex, stopIndex }) => {
+    this.props.loadChatList(startIndex, stopIndex);
+  };
+
+  render() {
+    let { selectedAccount, chats, chatLength } = this.props;
+
+    if (selectedAccount == null) {
       return <div>Please login</div>;
     }
-
-    let rowCount = account.chat_states
-      ? Object.keys(account.chat_states).length
-      : 0;
 
     return (
       <AutoSizer disableWidth>
         {({ height }) => (
-          <List
-            className="chat-list"
-            height={height}
-            rowCount={rowCount}
-            rowHeight={80}
-            rowRenderer={this.rowRenderer}
-            width={350}
-            {
-              ...this.props /* Force rerender when props change*/
-            }
-          />
+          <InfiniteLoader
+            isRowLoaded={this.isRowLoaded}
+            loadMoreRows={this.loadMoreRows}
+            rowCount={chatLength}
+          >
+            {({ onRowsRendered, registerChild }) => (
+              <List
+                className="chat-list"
+                height={height}
+                onRowsRendered={onRowsRendered}
+                ref={registerChild}
+                rowCount={chatLength}
+                rowHeight={80}
+                rowRenderer={this.rowRenderer}
+                width={350}
+                {
+                  ...this.props /* Force rerender when props change*/
+                }
+              />
+            )}
+          </InfiniteLoader>
         )}
       </AutoSizer>
     );
@@ -94,19 +110,26 @@ class ChatList extends React.Component {
 }
 
 const mapStateToProps = state => {
-  let selected = state.shared.selected_account;
-  let accounts = state.shared.accounts;
-  let account = selected != null && accounts != null && accounts[selected];
+  let {
+    selected_account,
+    selected_chat,
+    selected_chat_id,
+    chats,
+    selected_chat_length
+  } = state.shared;
 
   return {
-    account,
-    selectedAccount: selected,
-    selectedChat: account && account.selected_chat
+    chats,
+    selectedAccount: selected_account,
+    selectedChat: selected_chat,
+    selectedChatId: selected_chat_id,
+    chatLength: selected_chat_length || 0
   };
 };
 
 const mapDispatchToProps = {
-  selectChat
+  selectChat,
+  loadChatList
 };
 
 export default connect(mapStateToProps, mapDispatchToProps)(ChatList);

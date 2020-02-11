@@ -25,6 +25,18 @@ pub enum Request {
     Import { path: String, email: String },
     #[serde(rename = "SELECT_CHAT")]
     SelectChat { account: String, chat_id: ChatId },
+    #[serde(rename = "LOAD_CHAT_LIST")]
+    LoadChatList {
+        start_index: usize,
+        stop_index: usize,
+    },
+    #[serde(rename = "LOAD_MESSAGE_LIST")]
+    LoadMessageList {
+        start_index: usize,
+        stop_index: usize,
+    },
+    #[serde(rename = "SELECT_ACCOUNT")]
+    SelectAccount { account: String },
 }
 
 #[derive(Debug, Serialize)]
@@ -92,7 +104,11 @@ impl LocalState {
         // Select the first one by default
         let selected_account = accounts.keys().next().cloned();
         if let Some(ref selected) = selected_account {
-            accounts.get(selected).unwrap().load_chats().await?;
+            accounts
+                .get(selected)
+                .unwrap()
+                .load_chat_list(0, 10)
+                .await?;
         }
         info!("loaded state");
 
@@ -113,19 +129,63 @@ pub struct State {
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub struct SharedState {
-    pub accounts: HashMap<String, AccountState>,
+    pub accounts: HashMap<String, SharedAccountState>,
     pub errors: Vec<String>,
     pub selected_account: Option<String>,
+    pub selected_chat_id: Option<ChatId>,
+    pub selected_chat: Option<ChatState>,
+    pub selected_chat_length: usize,
+    pub chats: HashMap<usize, ChatState>,
+    pub selected_messages_length: usize,
+    pub messages: HashMap<usize, ChatMessage>,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub struct SharedAccountState {
+    pub logged_in: Login,
+    pub email: String,
 }
 
 impl Response {
     pub async fn from_local_state(state: &LocalState) -> Self {
         let mut accounts = HashMap::with_capacity(state.accounts.len());
         for (email, account) in state.accounts.iter() {
-            accounts.insert(email.clone(), account.state.read().await.clone());
+            let account = &account.state.read().await;
+            accounts.insert(
+                email.clone(),
+                SharedAccountState {
+                    logged_in: account.logged_in.clone(),
+                    email: account.email.clone(),
+                },
+            );
         }
 
         let errors = state.errors.iter().map(|e| e.to_string()).collect();
+        let (
+            chats,
+            selected_chat_length,
+            selected_chat_id,
+            selected_chat,
+            selected_messages_length,
+            messages,
+        ) = if let Some(ref account_name) = state.selected_account {
+            let account = state
+                .accounts
+                .get(account_name)
+                .expect("invalid account state");
+            let state = account.state.read().await;
+            (
+                state.chat_states.clone(),
+                state.chatlist.len(),
+                state.selected_chat_id.clone(),
+                state.selected_chat.clone(),
+                state.chat_msg_ids.len(),
+                state.chat_msgs.clone(),
+            )
+        } else {
+            (HashMap::new(), 0, None, None, 0, HashMap::new())
+        };
 
         Response::RemoteUpdate {
             state: State {
@@ -133,6 +193,12 @@ impl Response {
                     accounts,
                     errors,
                     selected_account: state.selected_account.clone(),
+                    selected_chat_id,
+                    selected_chat,
+                    selected_chat_length,
+                    chats,
+                    messages,
+                    selected_messages_length,
                 },
             },
         }

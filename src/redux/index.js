@@ -50,6 +50,26 @@ export const selectChat = (account, chat_id) =>
     chat_id: parseInt(chat_id, 10)
   });
 
+export const selectAccount = account =>
+  remoteAction({
+    type: "SELECT_ACCOUNT",
+    account
+  });
+
+export const loadChatList = (start_index, stop_index) =>
+  remoteAction({
+    type: "LOAD_CHAT_LIST",
+    start_index,
+    stop_index
+  });
+
+export const loadMessageList = (start_index, stop_index) =>
+  remoteAction({
+    type: "LOAD_MESSAGE_LIST",
+    start_index,
+    stop_index
+  });
+
 export const imex = (email, path) =>
   remoteAction({
     type: "IMPORT",

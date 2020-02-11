@@ -12,13 +12,13 @@ mod state;
 use account::*;
 use state::*;
 
-fn main() -> Result<()> {
+fn main() {
     femme::start(log::LevelFilter::Info).unwrap();
 
     let addr = "127.0.0.1:8080";
 
     task::block_on(async move {
-        let local_state = Arc::new(RwLock::new(LocalState::new().await?));
+        let local_state = Arc::new(RwLock::new(LocalState::new().await.unwrap()));
 
         // Create the event loop and TCP listener we'll accept connections on.
         let try_socket = TcpListener::bind(&addr).await;
@@ -38,8 +38,7 @@ fn main() -> Result<()> {
                 }
             });
         }
-        Ok(())
-    })
+    });
 }
 
 async fn accept_connection(stream: TcpStream, local_state: Arc<RwLock<LocalState>>) -> Result<()> {
@@ -104,7 +103,7 @@ async fn accept_connection(stream: TcpStream, local_state: Arc<RwLock<LocalState
 
                         {
                             if let Some(account) = local_state.read().await.accounts.get(&email) {
-                                account.load_chats().await?;
+                                account.load_chat_list(0, 10).await?;
                             }
                         }
                         let local_state = local_state.read().await;
@@ -136,7 +135,7 @@ async fn accept_connection(stream: TcpStream, local_state: Arc<RwLock<LocalState
 
                         {
                             if let Some(account) = local_state.read().await.accounts.get(&email) {
-                                account.load_chats().await?;
+                                account.load_chat_list(0, 10).await?;
                             }
                         }
                         let local_state = local_state.read().await;
@@ -148,9 +147,44 @@ async fn accept_connection(stream: TcpStream, local_state: Arc<RwLock<LocalState
                             account.select_chat(chat_id).await?;
                             ls.send_update(write.clone()).await?;
 
-                            account.load_selected_chat().await?;
+                            account.load_message_list(0, 20).await?;
                             ls.send_update(write.clone()).await?;
                         }
+                    }
+                    Request::LoadChatList {
+                        start_index,
+                        stop_index,
+                    } => {
+                        let ls = local_state.read().await;
+                        if let Some(account) = ls
+                            .selected_account
+                            .as_ref()
+                            .and_then(|a| ls.accounts.get(a))
+                        {
+                            account.load_chat_list(start_index, stop_index).await?;
+                            ls.send_update(write.clone()).await?;
+                        }
+                    }
+                    Request::LoadMessageList {
+                        start_index,
+                        stop_index,
+                    } => {
+                        let ls = local_state.read().await;
+                        if let Some(account) = ls
+                            .selected_account
+                            .as_ref()
+                            .and_then(|a| ls.accounts.get(a))
+                        {
+                            account.load_message_list(start_index, stop_index).await?;
+                            ls.send_update(write.clone()).await?;
+                        }
+                    }
+                    Request::SelectAccount { account } => {
+                        info!("selecting account {}", account);
+
+                        let mut ls = local_state.write().await;
+                        ls.selected_account = Some(account);
+                        ls.send_update(write.clone()).await?;
                     }
                 },
                 Err(err) => warn!("invalid msg {}", err),

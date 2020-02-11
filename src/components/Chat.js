@@ -2,6 +2,7 @@ import React from "react";
 import { connect } from "react-redux";
 import {
   List,
+  InfiniteLoader,
   AutoSizer,
   CellMeasurer,
   CellMeasurerCache
@@ -9,34 +10,28 @@ import {
 import WindowSizeListener from "react-window-size-listener";
 import moment from "moment";
 
+import { loadMessageList } from "../redux";
+
 class Chat extends React.Component {
   constructor(props) {
     super(props);
 
     this._cache = new CellMeasurerCache({
-      defaultWidth: 400,
+      fixedWidth: true,
       defaultHeight: 50,
-      minWidth: 100,
       minHeight: 30
     });
 
     this.state = {
       email: "",
-      password: ""
+      password: "",
+      scrollTop: props.messagesLength - 1
     };
 
-    this.list = React.createRef();
+    this.list = null;
   }
 
   componentDidUpdate(prevProps, prevState, snapshot) {
-    const prev_chats = prevProps.selectedChatMsgs;
-    const curr_chats = this.props.selectedChatMsgs;
-
-    if (!prev_chats || (curr_chats && prev_chats.length != curr_chats)) {
-      // scroll to the end on initial render, and when the length changes
-      this.list.current && this.list.current.scrollToRow(curr_chats.length - 1);
-    }
-
     if (this.props.selectedChat != prevProps.selectedChat) {
       // clear cache when we change the chat
       this._cache.clearAll();
@@ -50,15 +45,14 @@ class Chat extends React.Component {
   };
 
   rowRenderer = ({ index, isScrolling, isVisible, key, parent, style }) => {
-    const { selectedChat, selectedChatMsgs } = this.props;
+    const { messages } = this.props;
+    const msg = messages[index];
 
-    if (selectedChat == null || selectedChatMsgs == null) {
+    if (msg == null) {
       return <div key={key} style={style}></div>;
     }
 
-    const msg = Object.values(selectedChatMsgs)[index];
     // TODO: handle non text messages
-
     let content;
 
     if (msg.is_info) {
@@ -92,7 +86,7 @@ class Chat extends React.Component {
                 {moment.unix(msg.timestamp).format("h:mm")}
               </div>
             </div>
-            <div className="message-text">{msg.text}</div>
+            <div className="message-text">{msg.text || msg.viewtype}</div>
           </div>
         </div>
       );
@@ -113,15 +107,21 @@ class Chat extends React.Component {
     );
   };
 
-  render() {
-    let { selectedChat, selectedChatMsgs } = this.props;
+  isRowLoaded = ({ index }) => {
+    !!this.props.messages[index];
+  };
 
-    if (selectedChat == null) {
+  loadMoreRows = ({ startIndex, stopIndex }) => {
+    this.props.loadMessageList(startIndex, stopIndex);
+  };
+
+  render() {
+    let { messages, messagesLength, selectedChat } = this.props;
+    let { scrollTop } = this.state;
+
+    if (messages == null || selectedChat == null) {
       return <div>Please select a chat</div>;
     }
-
-    let rowCount =
-      selectedChatMsgs != null ? Object.keys(selectedChatMsgs).length : 0;
 
     return (
       <div className="chat">
@@ -130,18 +130,28 @@ class Chat extends React.Component {
         <div className="message-list">
           <AutoSizer>
             {({ width, height }) => (
-              <List
-                height={height}
-                rowCount={rowCount}
-                rowHeight={this._cache.rowHeight}
-                rowRenderer={this.rowRenderer}
-                width={width - 10}
-                deferredMeasurementCache={this._cache}
-                ref={this.list}
-                {
-                  ...this.props /* Force rerender when props change*/
-                }
-              />
+              <InfiniteLoader
+                isRowLoaded={this.isRowLoaded}
+                loadMoreRows={this.loadMoreRows}
+                rowCount={messagesLength}
+              >
+                {({ onRowsRendered, registerChild }) => (
+                  <List
+                    height={height}
+                    rowCount={messagesLength}
+                    rowHeight={this._cache.rowHeight}
+                    rowRenderer={this.rowRenderer}
+                    width={width - 10}
+                    deferredMeasurementCache={this._cache}
+                    ref={registerChild}
+                    scrollToIndex={messagesLength}
+                    onRowsRendered={onRowsRendered}
+                    {
+                      ...this.props /* Force rerender when props change*/
+                    }
+                  />
+                )}
+              </InfiniteLoader>
             )}
           </AutoSizer>
         </div>
@@ -154,19 +164,17 @@ class Chat extends React.Component {
 }
 
 const mapStateToProps = state => {
-  let selected = state.shared.selected_account;
-  let accounts = state.shared.accounts;
-  let account = selected != null && accounts != null && accounts[selected];
+  let { selected_chat, messages, selected_messages_length } = state.shared;
 
   return {
-    selectedAccount: selected,
-    selectedChatId: account && account.selected_chat,
-    selectedChat:
-      account && account.selected_chat && account.chats[account.selected_chat],
-    selectedChatMsgs: account && account.selected_chat_msgs
+    selectedChat: selected_chat,
+    messages,
+    messagesLength: selected_messages_length || 0
   };
 };
 
-const mapDispatchToProps = {};
+const mapDispatchToProps = {
+  loadMessageList
+};
 
 export default connect(mapStateToProps, mapDispatchToProps)(Chat);
