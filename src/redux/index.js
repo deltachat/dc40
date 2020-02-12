@@ -18,8 +18,6 @@ const DEFAULT_SHARED_STATE = {
 
 const shared = (state = DEFAULT_SHARED_STATE, action) => {
   switch (action.type) {
-    case "SAY":
-      return { messages: [...state.messages, action.message] };
     case "LOG":
       console.log(action.event);
       return state;
@@ -29,12 +27,6 @@ const shared = (state = DEFAULT_SHARED_STATE, action) => {
 };
 
 export const reducer = remoteCombineReducers({ foo }, { shared });
-
-export const say = message =>
-  remoteAction({
-    type: "INFO",
-    message
-  });
 
 export const login = (email, password) =>
   remoteAction({

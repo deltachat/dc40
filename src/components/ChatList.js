@@ -1,6 +1,7 @@
 import React from "react";
 import { connect } from "react-redux";
 import { InfiniteLoader, List, AutoSizer } from "react-virtualized";
+import { isEqual } from "lodash";
 
 import { selectChat, loadChatList } from "../redux/index";
 
@@ -31,7 +32,16 @@ class ChatList extends React.Component {
 
     const id = chat.id;
 
-    let image = <div className="letter-icon">{chat.name[0]}</div>;
+    const imageStyle = {
+      backgroundColor: "#" + chat.color.toString(16)
+    };
+
+    let image = (
+      <div className="letter-icon" style={imageStyle}>
+        {chat.name[0]}
+      </div>
+    );
+
     if (chat.profile_image != null) {
       image = (
         <img
@@ -59,6 +69,11 @@ class ChatList extends React.Component {
         <div className="chat-content">
           <div className="chat-header">{chat.name}</div>
           <div className="chat-preview">{chat.preview}</div>
+        </div>
+        <div className="chat-badge">
+          {chat.fresh_msg_cnt > 0 ? (
+            <div className="chat-badge-bubble">{chat.fresh_msg_cnt}</div>
+          ) : null}
         </div>
       </div>
     );
@@ -132,4 +147,6 @@ const mapDispatchToProps = {
   loadChatList
 };
 
-export default connect(mapStateToProps, mapDispatchToProps)(ChatList);
+export default connect(mapStateToProps, mapDispatchToProps, null, {
+  areStatePropsEqual: isEqual
+})(ChatList);

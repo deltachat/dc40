@@ -8,7 +8,9 @@ import {
   CellMeasurerCache
 } from "react-virtualized";
 import WindowSizeListener from "react-window-size-listener";
+import Linkify from "react-linkify";
 import moment from "moment";
+import { isEqual } from "lodash";
 
 import { loadMessageList } from "../redux";
 
@@ -18,8 +20,8 @@ class Chat extends React.Component {
 
     this._cache = new CellMeasurerCache({
       fixedWidth: true,
-      defaultHeight: 50,
-      minHeight: 30
+      defaultHeight: 60,
+      minHeight: 25
     });
 
     this.state = {
@@ -32,7 +34,7 @@ class Chat extends React.Component {
   }
 
   componentDidUpdate(prevProps, prevState, snapshot) {
-    if (this.props.selectedChat != prevProps.selectedChat) {
+    if (this.props.selectedChatId != prevProps.selectedChatId) {
       // clear cache when we change the chat
       this._cache.clearAll();
     }
@@ -52,41 +54,80 @@ class Chat extends React.Component {
       return <div key={key} style={style}></div>;
     }
 
-    // TODO: handle non text messages
+    let messageClassName = "message";
+
     let content;
 
     if (msg.is_info) {
       content = <div className="message-info">{msg.text}</div>;
     } else {
+      // was the previous message from the same as this message?
+      let sameSender = false;
+      if (index > 0 && messages[index - 1] != null) {
+        sameSender = messages[index - 1].from_id === msg.from_id;
+      }
+
       const imageStyle = {
         backgroundColor: "#" + msg.from_color.toString(16)
       };
 
-      let image = (
-        <div className="letter-icon" style={imageStyle}>
-          {msg.from_first_name[0]}
-        </div>
-      );
-      if (msg.from_profile_image != null) {
-        image = (
-          <img
-            className="image-icon"
-            src={"dc://" + msg.from_profile_image}
-            alt="avatar"
-          />
+      let image;
+      let header;
+
+      if (!sameSender) {
+        messageClassName += " first";
+
+        if (msg.from_profile_image != null) {
+          image = (
+            <img
+              className="image-icon"
+              src={"dc://" + msg.from_profile_image}
+              alt="avatar"
+            />
+          );
+        } else {
+          image = (
+            <div className="letter-icon" style={imageStyle}>
+              {msg.from_first_name[0]}
+            </div>
+          );
+        }
+        header = (
+          <div className="message-header">
+            <div className="message-sender">{msg.from_first_name}</div>
+            <div className="message-timestamp">
+              {moment.unix(msg.timestamp).format("h:mm")}
+            </div>
+          </div>
         );
       }
+
+      let file = null;
+      if (msg.file != null && msg.viewtype == "Image") {
+        let height = Math.min(msg.file_height, 300);
+        let width = "auto";
+
+        file = (
+          <div className="message-image">
+            <img
+              src={"dc://" + msg.file}
+              alt="image"
+              height={height}
+              width={width}
+            />
+          </div>
+        );
+      }
+
       content = (
         <div className="message-text">
           <div className="message-icon">{image}</div>
           <div className="message-body">
-            <div className="message-header">
-              <div className="message-sender">{msg.from_first_name}</div>
-              <div className="message-timestamp">
-                {moment.unix(msg.timestamp).format("h:mm")}
-              </div>
+            {header}
+            <div className="message-inner-text">
+              <Linkify>{msg.text}</Linkify>
             </div>
-            <div className="message-text">{msg.text || msg.viewtype}</div>
+            {file}
           </div>
         </div>
       );
@@ -100,7 +141,7 @@ class Chat extends React.Component {
         parent={parent}
         rowIndex={index}
       >
-        <div className="message" style={style}>
+        <div className={messageClassName} style={style}>
           {content}
         </div>
       </CellMeasurer>
@@ -126,7 +167,11 @@ class Chat extends React.Component {
     return (
       <div className="chat">
         <WindowSizeListener onResize={this.onResize} />
-        <div className="chat-header">{selectedChat.name}</div>
+        <div className="chat-header">
+          <div className="chat-header-name">{selectedChat.name}</div>
+          <div className="chat-header-subtitle">{selectedChat.subtitle}</div>
+        </div>
+
         <div className="message-list">
           <AutoSizer>
             {({ width, height }) => (
@@ -164,9 +209,15 @@ class Chat extends React.Component {
 }
 
 const mapStateToProps = state => {
-  let { selected_chat, messages, selected_messages_length } = state.shared;
+  let {
+    selected_chat,
+    selected_chat_id,
+    messages,
+    selected_messages_length
+  } = state.shared;
 
   return {
+    selectedChatId: selected_chat_id,
     selectedChat: selected_chat,
     messages,
     messagesLength: selected_messages_length || 0
@@ -177,4 +228,6 @@ const mapDispatchToProps = {
   loadMessageList
 };
 
-export default connect(mapStateToProps, mapDispatchToProps)(Chat);
+export default connect(mapStateToProps, mapDispatchToProps, null, {
+  areStatePropsEqual: isEqual
+})(Chat);

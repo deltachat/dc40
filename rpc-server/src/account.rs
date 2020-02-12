@@ -9,7 +9,7 @@ use broadcaster::BroadcastChannel;
 use deltachat::{
     chat::{self, Chat, ChatId},
     chatlist::Chatlist,
-    constants::Viewtype,
+    constants::{Chattype, Viewtype},
     contact::Contact,
     context::Context,
     message::{self, MessageState, MsgId},
@@ -62,6 +62,7 @@ pub struct AccountState {
 #[derive(Default, Debug, Serialize, Clone, Deserialize)]
 pub struct ChatMessage {
     id: MsgId,
+    from_id: u32,
     from_first_name: String,
     from_profile_image: Option<PathBuf>,
     from_color: u32,
@@ -71,17 +72,27 @@ pub struct ChatMessage {
     starred: bool,
     timestamp: i64,
     is_info: bool,
+    file: Option<PathBuf>,
+    file_height: i32,
+    file_width: i32,
 }
 
 #[derive(Default, Debug, Serialize, Clone, Deserialize)]
 pub struct ChatState {
     id: ChatId,
     name: String,
+    subtitle: String,
     header: String,
     preview: String,
     timestamp: i64,
     state: String,
     profile_image: Option<PathBuf>,
+    fresh_msg_cnt: usize,
+    can_send: bool,
+    is_self_talk: bool,
+    is_device_talk: bool,
+    chat_type: Chattype,
+    color: u32,
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone)]
@@ -344,31 +355,19 @@ impl Account {
 
     pub async fn select_chat(&self, chat_id: ChatId) -> Result<()> {
         info!("selecting chat {:?}", chat_id);
+        let (chat, chat_state) =
+            load_chat_state(self.context.clone(), self.state.clone(), chat_id).await?;
+
         let mut ls = self.state.write().await;
         ls.selected_chat_id = Some(chat_id);
         ls.chat_msg_ids = chat::get_chat_msgs(&self.context, chat_id, 0, None);
         ls.chat_msgs = Default::default();
 
-        let chat = Chat::load_from_db(&self.context, chat_id)
-            .map_err(|err| anyhow!("failed to load chats: {:?}", err))?;
-
-        if let Some(index) = ls.chatlist.get_index_for_id(chat_id) {
-            let lot = ls.chatlist.get_summary(&self.context, index, Some(&chat));
-            let header = lot.get_text1().map(|s| s.to_string()).unwrap_or_default();
-            let preview = lot.get_text2().map(|s| s.to_string()).unwrap_or_default();
-
-            let chat_state = ChatState {
-                id: chat_id,
-                name: chat.get_name().to_string(),
-                header,
-                preview,
-                timestamp: lot.get_timestamp(),
-                state: lot.get_state().to_string(),
-                profile_image: chat.get_profile_image(&self.context),
-            };
-
+        if let Some(chat_state) = chat_state {
             ls.selected_chat = Some(chat_state);
         }
+
+        ls.chats.insert(chat_id, chat);
 
         Ok(())
     }
@@ -496,33 +495,61 @@ pub async fn refresh_chat_state(
 ) -> Result<()> {
     info!("refreshing chat state: {:?}", &chat_id);
 
+    let (chat, chat_state) = load_chat_state(context, state.clone(), chat_id).await?;
+
     let mut state = state.write().await;
+    if let Some(chat_state) = chat_state {
+        if let Some(sel_chat_id) = state.selected_chat_id {
+            if sel_chat_id == chat_id {
+                state.selected_chat = Some(chat_state.clone());
+            }
+        }
+        if let Some(index) = state.chatlist.get_index_for_id(chat_id) {
+            state.chat_states.insert(index, chat_state);
+        }
+    }
+    state.chats.insert(chat_id, chat);
+
+    Ok(())
+}
+
+async fn load_chat_state(
+    context: Arc<Context>,
+    state: Arc<RwLock<AccountState>>,
+    chat_id: ChatId,
+) -> Result<(Chat, Option<ChatState>)> {
+    let state = state.read().await;
     let chats = &state.chatlist;
     let chat = Chat::load_from_db(&context, chat_id)
         .map_err(|err| anyhow!("failed to load chats: {:?}", err))?;
 
-    if let Some(index) = chats.get_index_for_id(chat_id) {
+    let chat_state = if let Some(index) = chats.get_index_for_id(chat_id) {
         let lot = chats.get_summary(&context, index, Some(&chat));
 
         let header = lot.get_text1().map(|s| s.to_string()).unwrap_or_default();
         let preview = lot.get_text2().map(|s| s.to_string()).unwrap_or_default();
 
-        let chat_state = ChatState {
+        Some(ChatState {
             id: chat_id,
             name: chat.get_name().to_string(),
+            subtitle: chat.get_subtitle(&context).to_string(),
             header,
             preview,
             timestamp: lot.get_timestamp(),
             state: lot.get_state().to_string(),
             profile_image: chat.get_profile_image(&context),
-        };
+            can_send: chat.can_send(),
+            chat_type: chat.get_type(),
+            color: chat.get_color(&context),
+            is_device_talk: chat.is_device_talk(),
+            is_self_talk: chat.is_self_talk(),
+            fresh_msg_cnt: chat_id.get_fresh_msg_cnt(&context),
+        })
+    } else {
+        None
+    };
 
-        state.chat_states.insert(index, chat_state);
-    }
-
-    state.chats.insert(chat_id, chat);
-
-    Ok(())
+    Ok((chat, chat_state))
 }
 
 pub async fn refresh_chat_list(
@@ -575,6 +602,7 @@ pub async fn refresh_message_list(
 
             let chat_msg = ChatMessage {
                 id: msg.get_id(),
+                from_id: msg.get_from_id(),
                 viewtype: msg.get_viewtype(),
                 from_first_name: from.get_first_name().to_string(),
                 from_profile_image: from.get_profile_image(&context),
@@ -584,6 +612,9 @@ pub async fn refresh_message_list(
                 text: msg.get_text(),
                 timestamp: msg.get_sort_timestamp(),
                 is_info: msg.is_info(),
+                file: msg.get_file(&context),
+                file_width: msg.get_width(),
+                file_height: msg.get_height(),
             };
             Ok((i, chat_msg))
         })

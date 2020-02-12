@@ -1,8 +1,6 @@
 import { combineReducers } from "redux";
 import ReconnectingWebSocket from "reconnecting-websocket";
 
-const isServer = false;
-
 export const remoteAction = action => {
   action.remote = true;
   return action;
@@ -19,14 +17,11 @@ const remoteReducer = (reducer, name) => {
 };
 
 export const remoteCombineReducers = (localReducers, remoteReducers) => {
-  if (isServer) {
-    return combineReducers(remoteReducers);
-  } else {
-    Object.keys(remoteReducers).forEach(key => {
-      remoteReducers[key] = remoteReducer(remoteReducers[key], key);
-    });
-    return combineReducers({ ...localReducers, ...remoteReducers });
-  }
+  Object.keys(remoteReducers).forEach(key => {
+    remoteReducers[key] = remoteReducer(remoteReducers[key], key);
+  });
+
+  return combineReducers({ ...localReducers, ...remoteReducers });
 };
 
 export const remoteMiddleware = url => store => {
@@ -49,8 +44,3 @@ const remoteDispatch = (url, localDispatch) => {
 
   return action => ws.send(JSON.stringify(action));
 };
-
-export const remoteUpdate = state => ({
-  type: "REMOTE_UPDATE",
-  state
-});

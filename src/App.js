@@ -2,7 +2,6 @@ import React, { Component } from "react";
 import { connect } from "react-redux";
 import { hot } from "react-hot-loader/root";
 
-import Message from "./components/Message";
 import AccountList from "./components/AccountList";
 import ChatList from "./components/ChatList";
 import Chat from "./components/Chat";
