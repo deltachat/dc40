@@ -4,8 +4,8 @@
   "description": "delta.chat next desktop",
   "main": "src/electron.js",
   "scripts": {
-    "react-start": "npx webpack-dev-server --config webpack.dev.js",
-    "react-build": "npx webpack --config webpack.prod.js",
+    "react-start": "NODE_ENV=development npx webpack-dev-server --config webpack.dev.js",
+    "react-build": "NODE_ENV=production npx webpack --config webpack.prod.js",
     "electron-build": "electron-builder -mwl",
     "clean-build": "rm -rf build/ .cache dist/",
     "build": "npm run clean-build && npm run react-build && npm run electron-build",
@@ -26,7 +26,11 @@
   "author": "dignifiedquire <me@dignifiedquire.com>",
   "license": "MIT",
   "dependencies": {
+    "draft-js": "^0.11.4",
+    "draft-js-emoji-mart-plugin": "0.0.6",
+    "draft-js-plugins-editor": "^3.0.0",
     "electron-is-dev": "1.1.0",
+    "emoji-mart": "^2.11.2",
     "lodash": "^4.17.15",
     "modern-css-reset": "^1.1.0",
     "moment": "^2.24.0",

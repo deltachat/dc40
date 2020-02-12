@@ -12,7 +12,8 @@ import Linkify from "react-linkify";
 import moment from "moment";
 import { isEqual } from "lodash";
 
-import { loadMessageList } from "../redux";
+import { loadMessageList, sendTextMessage, sendFileMessage } from "../redux";
+import Editor from "./Editor";
 
 class Chat extends React.Component {
   constructor(props) {
@@ -26,17 +27,22 @@ class Chat extends React.Component {
 
     this.state = {
       email: "",
-      password: "",
-      scrollTop: props.messagesLength - 1
+      password: ""
     };
 
-    this.list = null;
+    this.infiniteLoader = React.createRef();
   }
 
   componentDidUpdate(prevProps, prevState, snapshot) {
     if (this.props.selectedChatId != prevProps.selectedChatId) {
       // clear cache when we change the chat
       this._cache.clearAll();
+      this.loadMoreRows({
+        startIndex: this.props.messagesLength - 20,
+        stopIndex: this.props.messagesLength
+      });
+      this.infiniteLoader.current &&
+        this.infiniteLoader.current.resetLoadMoreRowsCache();
     }
 
     return null;
@@ -103,7 +109,10 @@ class Chat extends React.Component {
       }
 
       let file = null;
-      if (msg.file != null && msg.viewtype == "Image") {
+      if (
+        msg.file != null &&
+        (msg.viewtype === "Image" || msg.viewtype === "Gif")
+      ) {
         let height = Math.min(msg.file_height, 300);
         let width = "auto";
 
@@ -156,9 +165,38 @@ class Chat extends React.Component {
     this.props.loadMessageList(startIndex, stopIndex);
   };
 
+  onSendTextMessage = text => {
+    this.props.sendTextMessage(text);
+  };
+
+  onSendFileMessage = (file, text) => {
+    const path = file.path;
+    const mime = file.type; // mime type
+    let typ = "File";
+    switch (file.extension) {
+      case "png":
+      case "jpg":
+      case "jpeg":
+      case "webp":
+      case "tiff":
+      case "raw":
+        // image
+        typ = "Image";
+        break;
+      case "gif":
+        typ = "Gif";
+        break;
+      default:
+        break;
+    }
+
+    // TODO: detect more formats
+
+    this.props.sendFileMessage(typ, path, text, mime);
+  };
+
   render() {
-    let { messages, messagesLength, selectedChat } = this.props;
-    let { scrollTop } = this.state;
+    let { messages, messagesLength, selectedChat, selectedChatId } = this.props;
 
     if (messages == null || selectedChat == null) {
       return <div>Please select a chat</div>;
@@ -176,9 +214,11 @@ class Chat extends React.Component {
           <AutoSizer>
             {({ width, height }) => (
               <InfiniteLoader
+                ref={this.infiniteLoader}
                 isRowLoaded={this.isRowLoaded}
                 loadMoreRows={this.loadMoreRows}
                 rowCount={messagesLength}
+                selectedChat={selectedChat}
               >
                 {({ onRowsRendered, registerChild }) => (
                   <List
@@ -191,18 +231,18 @@ class Chat extends React.Component {
                     ref={registerChild}
                     scrollToIndex={messagesLength}
                     onRowsRendered={onRowsRendered}
-                    {
-                      ...this.props /* Force rerender when props change*/
-                    }
+                    selectedChat={selectedChat}
                   />
                 )}
               </InfiniteLoader>
             )}
           </AutoSizer>
         </div>
-        <div className="chat-input">
-          <input type="text" />
-        </div>
+        <Editor
+          placeholder="Type message"
+          onEnter={this.onSendTextMessage}
+          onFile={this.onSendFileMessage}
+        />
       </div>
     );
   }
@@ -225,7 +265,9 @@ const mapStateToProps = state => {
 };
 
 const mapDispatchToProps = {
-  loadMessageList
+  loadMessageList,
+  sendTextMessage,
+  sendFileMessage
 };
 
 export default connect(mapStateToProps, mapDispatchToProps, null, {

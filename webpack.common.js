@@ -18,6 +18,8 @@ module.exports = {
             loader: MiniCssExtractPlugin.loader,
             options: {
               publicPath: '/',
+              esModule: true,
+              hmr: process.env.NODE_ENV === 'development'
             },
           },
           { loader: 'css-loader' },
@@ -36,6 +38,8 @@ module.exports = {
             loader: MiniCssExtractPlugin.loader,
             options: {
               publicPath: '/',
+              esModule: true,
+              hmr: process.env.NODE_ENV === 'development'
             },
           },
           { loader: 'css-loader' },

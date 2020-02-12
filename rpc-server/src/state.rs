@@ -4,7 +4,7 @@ use async_std::{
     task,
 };
 use async_tungstenite::tungstenite::Message;
-use deltachat::chat::ChatId;
+use deltachat::{chat::ChatId, constants::Viewtype};
 use futures::sink::SinkExt;
 use log::{info, warn};
 use serde::{Deserialize, Serialize};
@@ -37,6 +37,15 @@ pub enum Request {
     },
     #[serde(rename = "SELECT_ACCOUNT")]
     SelectAccount { account: String },
+    #[serde(rename = "SEND_TEXT_MESSAGE")]
+    SendTextMessage { text: String },
+    #[serde(rename = "SEND_FILE_MESSAGE")]
+    SendFileMessage {
+        typ: Viewtype,
+        path: String,
+        text: Option<String>,
+        mime: Option<String>,
+    },
 }
 
 #[derive(Debug, Serialize)]

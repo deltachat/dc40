@@ -69,6 +69,21 @@ export const imex = (email, path) =>
     path
   });
 
+export const sendTextMessage = text =>
+  remoteAction({
+    type: "SEND_TEXT_MESSAGE",
+    text
+  });
+
+export const sendFileMessage = (typ, path, text, mime) =>
+  remoteAction({
+    type: "SEND_FILE_MESSAGE",
+    typ,
+    path,
+    text,
+    mime
+  });
+
 export const add = value => ({
   type: "ADD",
   value

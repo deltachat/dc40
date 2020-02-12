@@ -384,6 +384,38 @@ impl Account {
         Ok(())
     }
 
+    pub async fn send_text_message(&self, text: String) -> Result<()> {
+        if let Some(chat_id) = self.state.read().await.selected_chat_id {
+            chat::send_text_msg(&self.context, chat_id, text)
+                .map_err(|err| anyhow!("failed to send message: {}", err))?;
+        } else {
+            bail!("no chat selected, can not send message");
+        }
+
+        Ok(())
+    }
+
+    pub async fn send_file_message(
+        &self,
+        typ: Viewtype,
+        path: String,
+        text: Option<String>,
+        mime: Option<String>,
+    ) -> Result<()> {
+        if let Some(chat_id) = self.state.read().await.selected_chat_id {
+            let mut msg = message::Message::new(typ);
+            msg.set_text(text);
+            msg.set_file(path, mime.as_deref());
+
+            chat::send_msg(&self.context, chat_id, &mut msg)
+                .map_err(|err| anyhow!("failed to send message: {}", err))?;
+        } else {
+            bail!("no chat selected, can not send message");
+        }
+
+        Ok(())
+    }
+
     pub fn subscribe<T: futures::sink::Sink<Message> + Unpin + Sync + Send + 'static>(
         &self,
         writer: Arc<RwLock<T>>,

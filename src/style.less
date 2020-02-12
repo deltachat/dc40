@@ -183,15 +183,6 @@ body {
       }
     }
   }
-
-  .chat-input {
-    flex: 0 0 100px;
-    padding: 25px 20px;
-
-    input {
-      border: 1px solid green;
-    }
-  }
 }
 
 .chat-list {
@@ -292,6 +283,55 @@ body {
     }
   }
 }
+
+.chat-input {
+  flex: 0 0 40px;
+  border: 1px solid #afb6c0;
+  minHeight: 30px;
+  margin: 10px;
+  padding: 5px 15px;
+  border-radius: 5px;
+  display: flex;
+
+  .public-DraftEditorPlaceholder-root {
+    margin: -5px -15px -15px;
+    padding: 0 15px;
+    color: #afb6c0;
+  }
+
+  .chat-editor {
+    flex: 1;
+
+    .emoji-mart-emoji {
+      line-height: 38px;
+      padding: 0 4px;
+    }
+  }
+  
+  .chat-emoji-picker {
+    flex: 1;
+  }
+  
+  .chat-emoji-picker-button, .chat-files-picker {
+    flex: 0 0 40px;
+    color: #afb6c0;
+    align-self: right;
+    transition: color 0.3s ease;
+    margin-left: 10px;
+    
+    &:hover {
+      cursor: pointer;
+      color: #0065ff;
+    }
+  }
+
+  .emoji-mart {
+    position: fixed;
+    bottom: 15px;
+    right: 15px;
+  }
+}
+
 
 .login {
   display: flex;

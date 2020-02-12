@@ -186,6 +186,33 @@ async fn accept_connection(stream: TcpStream, local_state: Arc<RwLock<LocalState
                         ls.selected_account = Some(account);
                         ls.send_update(write.clone()).await?;
                     }
+                    Request::SendTextMessage { text } => {
+                        let ls = local_state.read().await;
+                        if let Some(account) = ls
+                            .selected_account
+                            .as_ref()
+                            .and_then(|a| ls.accounts.get(a))
+                        {
+                            account.send_text_message(text).await?;
+                            ls.send_update(write.clone()).await?;
+                        }
+                    }
+                    Request::SendFileMessage {
+                        typ,
+                        path,
+                        text,
+                        mime,
+                    } => {
+                        let ls = local_state.read().await;
+                        if let Some(account) = ls
+                            .selected_account
+                            .as_ref()
+                            .and_then(|a| ls.accounts.get(a))
+                        {
+                            account.send_file_message(typ, path, text, mime).await?;
+                            ls.send_update(write.clone()).await?;
+                        }
+                    }
                 },
                 Err(err) => warn!("invalid msg {}", err),
             }
