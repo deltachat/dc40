@@ -41,6 +41,7 @@
     "react-linkify": "^1.0.0-alpha",
     "react-modal": "^3.11.1",
     "react-redux": "^7.0.3",
+    "react-titlebar-osx": "^1.1.0",
     "react-virtualized": "^9.21.2",
     "react-window-size-listener": "^1.5.4",
     "reconnecting-websocket": "^4.4.0",

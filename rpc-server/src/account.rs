@@ -363,6 +363,10 @@ impl Account {
         ls.chat_msg_ids = chat::get_chat_msgs(&self.context, chat_id, 0, None);
         ls.chat_msgs = Default::default();
 
+        // mark as noticed
+        chat::marknoticed_chat(&self.context, chat_id)
+            .map_err(|err| anyhow!("failed to mark noticed: {:?}", err))?;
+
         if let Some(chat_state) = chat_state {
             ls.selected_chat = Some(chat_state);
         }
@@ -380,6 +384,10 @@ impl Account {
         }
 
         refresh_message_list(self.context.clone(), self.state.clone(), None).await?;
+
+        // markseen messages that we load
+        // could be better, by checking actual in view, but close enough for now
+        message::markseen_msgs(&self.context, &self.state.read().await.chat_msg_ids[..]);
 
         Ok(())
     }

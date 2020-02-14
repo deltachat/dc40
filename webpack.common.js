@@ -47,7 +47,11 @@ module.exports = {
       },
       {
         test: /\.m?js$/,
-        exclude: /node_modules/,
+        exclude: [
+          /node_modules/,
+          path.join(__dirname, 'src/electron.js'),
+          path.join(__dirname, 'src/preload.js'),
+        ],
         use: {
           loader: 'babel-loader'
         }

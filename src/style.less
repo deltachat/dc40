@@ -7,44 +7,81 @@ body {
   outline: none;
 }
 
+@lightBlueGray: #8199bd;
+@darkBlue: #0a1d3b;
+@gray: #afb6c0;
+@hoverBlue: #05419d;
+
 // Layout
 
 .app {
   display: flex;
-  flex-direction: row;
+  flex-direction: column;
   min-height: 100vh;
 }
 
+.account-header {
+  flex: 0 0 50px;
+  display: flex;
+  width: 400px;
+  background-color: @darkBlue;
+  border-bottom: 1px solid @lightBlueGray;
+
+  .titlebar {
+
+    .titlebar-stoplight .titlebar-close,
+    .titlebar-stoplight .titlebar-minimize,
+    .titlebar-stoplight .titlebar-fullscreen {
+      width: 12px;
+      height: 12px;
+    }
+  }
+  
+  .account-info {
+    flex: 1;
+    color: #FFFFFF;
+    padding: 10px 15px;
+  }
+}
+
+.app-container {
+  flex: 1;
+  display: flex;
+  flex-direction: row;
+}
+
 .account-list {
-  flex: 0 0 70px;
+  flex: 0 0 50px;
   flex-direction: column;
   background-color: #011434;
 
   .account {
-    flex: 0 0 55px;
-    margin: 7.5px;
-    height: 55px;
-    width: 55px;
-    max-width: 55px;
+    flex: 0 0 32px;
+    margin: 9px;
+    height: 32px;
+    width: 32px;
     border: 3px solid transparent;
-    border-radius: 15px;
+    border-radius: 10px;
     color: #ffffff;
     overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    transition: background-color 0.3s ease;
     
     &:hover {
       cursor: pointer;
+      background-color: @hoverBlue;
     }
 
     &.active {
-      border: 3px solid rgba(255, 255, 255, 0.8);
+      border: 2px solid rgba(255, 255, 255, 0.8);
     }
   }
-
+  
   a.account {
     display: block;
 
     i {
-      padding: 10px;
+      padding: 0px;
     }
   }
 }
@@ -60,34 +97,72 @@ body {
     display: flex;
     flex-direction: column;
     flex: 0 0 50px;
-    padding: 5px 20px;
-    background-color: #0065ff;
-    color: #fff;
+    padding: 0px 20px;
+    background-color: #fff;
     font-size: 18px;
+    border-bottom: 1px solid @gray;
+    margin-bottom: 5px;
+    margin-top: -50px;
+    align-items: stretch;
 
     .chat-header-name {
       flex: 1;
+      padding: 3px 0;
+      font-size: 16px;
+      line-height: 24px;
     }
     
     .chat-header-subtitle {
       flex: 1;
       font-size: 14px;
+      line-height: 14px;
       font-weight: 300;
     }
   }
 
   .message-list {
     flex: 1 1 auto;
+    
 
     .message {
+      flex: 1;
       display: flex;
-      flex-direction: row;
+      flex-direction: column;
       padding: 0 20px;
 
       &.first {
         padding-top: 5px;
       }
 
+      .message-new-day {
+        flex: 1;
+        height: 10px;
+        color: #f07071;
+        text-align: center;
+        align-items: center;
+        display: flex;
+        margin: 10px 0 15px;
+
+        &::before, &::after {
+          content: '';
+          flex: 1;
+          border-bottom: 1px solid #f07071;
+        }
+
+        &::before {
+          margin-right: 10px;
+        }
+        
+        &::after {
+          margin-left: 10px;
+        }
+      }
+
+      .message-content {
+        display: flex;
+        flex-direction: row;
+      }
+      
       .message-icon {
         flex: 0 0 30px;
         border-radius: 7px;
@@ -185,10 +260,20 @@ body {
   }
 }
 
+.chat-bar {
+  flex: 0 0 350;
+  align-items: stretch;
+  max-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
 .chat-list {
-  flex: 0 0 300;
-  background-color: #0a1d3b;
-  color: #8199bd;
+  flex: 1 1 auto;
+  width: 100%;
+  background-color: @darkBlue;
+  color: @lightBlueGray;
+  height: 100%;
 
   .chat-list-item {
     flex: 1;
@@ -203,28 +288,36 @@ body {
     &:hover {
       cursor: pointer;
       color: rgba(255, 255, 255, 0.8);
-      background-color: #05419d;
+      background-color: @hoverBlue;
+
+      .chat-icon {
+        background-color: @hoverBlue;
+      }
     }
 
     &.active {
       color: #fff;
       background-color: #0065ff;
 
+      .chat-icon {
+        background-color: #0065ff;
+      }
       .chat-badge-bubble {
         border: 1px solid #FFFFFF;
       }
     }
 
     .chat-icon {
-      flex: 0 0 50px;
-      border-radius: 15px;
-      height: 50px;
-      width: 50px;
+      flex: 0 0 32px;
+      border-radius: 10px;
+      height: 32px;
+      width: 32px;
       overflow: hidden;
-      margin: 15px 3px 3px 3px;
+      margin: 20px 3px 3px 3px;
       background-color: #162743;
       display: flex;
       align-items: stretch;
+      transition: background-color 0.3s ease;
 
       .letter-icon {
         flex: 1;
@@ -233,7 +326,7 @@ body {
       }
       
       img {
-        height: 50px;
+        height: 32px;
         object-fit: contain;
       }
     }
@@ -341,9 +434,9 @@ body {
 
 .letter-icon {
   text-transform: uppercase;
-  font-size: 32px;
+  font-size: 20px;
   text-align: center;
   vertical-align: middle;
-  padding: 3px;
+  padding: 0px;
 }
 

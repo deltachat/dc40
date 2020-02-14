@@ -64,6 +64,24 @@ class Chat extends React.Component {
 
     let content;
 
+    // check if we have a day switch
+    let newDay = null;
+    if (index > 0 && messages[index - 1] != null) {
+      let a = moment.unix(msg.timestamp);
+      let b = moment.unix(messages[index - 1].timestamp);
+      if (a.isAfter(b, "day")) {
+        let date = a.calendar(null, {
+          sameDay: "[Today]",
+          nextDay: "[Tomorrow]",
+          nextWeek: "dddd, MMMM, do",
+          lastDay: "[Yesterday]",
+          lastWeek: "dddd, MMMM, do",
+          sameElse: "dddd, MMMM, do"
+        });
+        newDay = <div className="message-new-day">{date}</div>;
+      }
+    }
+
     if (msg.is_info) {
       content = <div className="message-info">{msg.text}</div>;
     } else {
@@ -151,7 +169,8 @@ class Chat extends React.Component {
         rowIndex={index}
       >
         <div className={messageClassName} style={style}>
-          {content}
+          {newDay}
+          <div className="message-content">{content}</div>
         </div>
       </CellMeasurer>
     );
