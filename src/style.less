@@ -9,6 +9,7 @@ body {
 
 @lightBlueGray: #8199bd;
 @darkBlue: #0a1d3b;
+@darkerBlue: #011434;
 @gray: #afb6c0;
 @hoverBlue: #05419d;
 
@@ -16,27 +17,17 @@ body {
 
 .app {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   min-height: 100vh;
 }
 
 .account-header {
   flex: 0 0 50px;
   display: flex;
-  width: 400px;
+  width: 350px;
   background-color: @darkBlue;
   border-bottom: 1px solid @lightBlueGray;
 
-  .titlebar {
-
-    .titlebar-stoplight .titlebar-close,
-    .titlebar-stoplight .titlebar-minimize,
-    .titlebar-stoplight .titlebar-fullscreen {
-      width: 12px;
-      height: 12px;
-    }
-  }
-  
   .account-info {
     flex: 1;
     color: #FFFFFF;
@@ -44,20 +35,32 @@ body {
   }
 }
 
-.app-container {
-  flex: 1;
+.sidebar {
+  flex: 0 0 60px;
   display: flex;
-  flex-direction: row;
+  background-color: @darkerBlue;
+  flex-direction: column;
+
+  .titlebar {
+    .titlebar-stoplight .titlebar-close,
+    .titlebar-stoplight .titlebar-minimize,
+    .titlebar-stoplight .titlebar-fullscreen {
+      width: 12px;
+      height: 12px;
+    }
+  }
 }
 
 .account-list {
-  flex: 0 0 50px;
+  flex: 0 0 68px;
   flex-direction: column;
-  background-color: #011434;
+  background-color: @darkerBlue;
+  display: flex;
+  align-items: center;
 
   .account {
     flex: 0 0 32px;
-    margin: 9px;
+    margin: 5px 0;
     height: 32px;
     width: 32px;
     border: 3px solid transparent;
@@ -102,7 +105,6 @@ body {
     font-size: 18px;
     border-bottom: 1px solid @gray;
     margin-bottom: 5px;
-    margin-top: -50px;
     align-items: stretch;
 
     .chat-header-name {
@@ -264,6 +266,14 @@ body {
   flex: 0 0 350;
   align-items: stretch;
   max-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+
+.chats {
+  flex: 0 0 350px;
+  width: 100%;
   display: flex;
   flex-direction: column;
 }

@@ -1,6 +1,7 @@
 const electron = require("electron");
 const app = electron.app;
 const protocol = electron.protocol;
+const shell = electron.shell;
 const ipc = electron.ipcMain;
 
 const BrowserWindow = electron.BrowserWindow;
@@ -11,7 +12,27 @@ isDev && require("react-devtools-electron");
 
 let mainWindow;
 
-app.on("ready", createWindow);
+const gotTheLock = app.requestSingleInstanceLock();
+
+function start() {
+  if (!gotTheLock) {
+    app.quit();
+    n;
+    return;
+  }
+
+  app.on("second-instance", (event, commandLine, workingDirectory) => {
+    // Someone tried to run a second instance, we should focus our window.
+    if (mainWindow) {
+      if (mainWindow.isMinimized()) {
+        myWindow.restore();
+      }
+
+      mainWindow.focus();
+    }
+  });
+  app.on("ready", createWindow);
+}
 
 app.on("window-all-closed", () => {
   if (process.platform !== "darwin") {
@@ -59,6 +80,12 @@ function createWindow() {
     }
   );
 
+  mainWindow.webContents.on("new-window", (event, url) => {
+    event.preventDefault();
+    console.log("opening", url);
+    shell.openExternal(url);
+  });
+
   ipc.on("toMain", function(arg, event) {
     switch (event) {
       case "minimize":
@@ -81,3 +108,5 @@ function createWindow() {
     }
   });
 }
+
+start();

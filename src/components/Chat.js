@@ -8,7 +8,7 @@ import {
   CellMeasurerCache
 } from "react-virtualized";
 import WindowSizeListener from "react-window-size-listener";
-import Linkify from "react-linkify";
+import ReactTextFormat from "react-text-format";
 import moment from "moment";
 import { isEqual } from "lodash";
 
@@ -152,7 +152,18 @@ class Chat extends React.Component {
           <div className="message-body">
             {header}
             <div className="message-inner-text">
-              <Linkify>{msg.text}</Linkify>
+              <ReactTextFormat
+                linkTarget="_blank"
+                allowedFormats={[
+                  "URL",
+                  "Email",
+                  "Image",
+                  "Phone",
+                  "CreditCard"
+                ]}
+              >
+                {msg.text}
+              </ReactTextFormat>
             </div>
             {file}
           </div>

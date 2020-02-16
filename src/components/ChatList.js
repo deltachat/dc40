@@ -95,31 +95,36 @@ class ChatList extends React.Component {
     }
 
     return (
-      <AutoSizer disableWidth>
-        {({ height }) => (
-          <InfiniteLoader
-            isRowLoaded={this.isRowLoaded}
-            loadMoreRows={this.loadMoreRows}
-            rowCount={chatLength}
-          >
-            {({ onRowsRendered, registerChild }) => (
-              <List
-                className="chat-list"
-                height={height}
-                onRowsRendered={onRowsRendered}
-                ref={registerChild}
-                rowCount={chatLength}
-                rowHeight={70}
-                rowRenderer={this.rowRenderer}
-                width={350}
-                {
-                  ...this.props /* Force rerender when props change*/
-                }
-              />
-            )}
-          </InfiniteLoader>
-        )}
-      </AutoSizer>
+      <div className="chats">
+        <div className="account-header">
+          <div className="account-info">{selectedAccount}</div>
+        </div>
+        <AutoSizer disableWidth>
+          {({ height }) => (
+            <InfiniteLoader
+              isRowLoaded={this.isRowLoaded}
+              loadMoreRows={this.loadMoreRows}
+              rowCount={chatLength}
+            >
+              {({ onRowsRendered, registerChild }) => (
+                <List
+                  className="chat-list"
+                  height={height - 50}
+                  onRowsRendered={onRowsRendered}
+                  ref={registerChild}
+                  rowCount={chatLength}
+                  rowHeight={70}
+                  rowRenderer={this.rowRenderer}
+                  width={350}
+                  {
+                    ...this.props /* Force rerender when props change*/
+                  }
+                />
+              )}
+            </InfiniteLoader>
+          )}
+        </AutoSizer>
+      </div>
     );
   }
 }
