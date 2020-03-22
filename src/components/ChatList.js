@@ -3,6 +3,7 @@ import { connect } from "react-redux";
 import { InfiniteLoader, List, AutoSizer } from "react-virtualized";
 import { isEqual } from "lodash";
 
+import RecycledList from "./RecycledList";
 import { selectChat, loadChatList } from "../redux/index";
 
 class ChatList extends React.Component {
@@ -22,12 +23,11 @@ class ChatList extends React.Component {
     }
   }
 
-  rowRenderer = ({ index, isScrolling, isVisible, key, parent, style }) => {
+  rowRenderer = chat => {
     const { selectedAccount, selectedChatId, chats } = this.props;
-    const chat = chats[index];
 
     if (selectedAccount == null || chat == null) {
-      return <div key={key} style={style}></div>;
+      return <div></div>;
     }
 
     const id = chat.id;
@@ -59,12 +59,7 @@ class ChatList extends React.Component {
     }
 
     return (
-      <div
-        className={className}
-        key={key}
-        style={style}
-        onClick={this.onChatClick.bind(this, id)}
-      >
+      <div className={className} onClick={this.onChatClick.bind(this, id)}>
         <div className="chat-icon">{image}</div>
         <div className="chat-content">
           <div className="chat-header">{chat.name}</div>
@@ -107,18 +102,15 @@ class ChatList extends React.Component {
               rowCount={chatLength}
             >
               {({ onRowsRendered, registerChild }) => (
-                <List
+                <RecycledList
                   className="chat-list"
                   height={height - 50}
                   onRowsRendered={onRowsRendered}
                   ref={registerChild}
-                  rowCount={chatLength}
-                  rowHeight={70}
-                  rowRenderer={this.rowRenderer}
+                  attrList={Object.values(chats)}
+                  itemHeight={70}
+                  itemFn={this.rowRenderer}
                   width={350}
-                  {
-                    ...this.props /* Force rerender when props change*/
-                  }
                 />
               )}
             </InfiniteLoader>

@@ -278,15 +278,13 @@ body {
   flex-direction: column;
 }
 
-.chat-list {
-  flex: 1 1 auto;
-  width: 100%;
+.chat-list .recycled-list-wrapper {
   background-color: @darkBlue;
   color: @lightBlueGray;
-  height: 100%;
 
   .chat-list-item {
     flex: 1;
+    height: 100%;
     display: flex;
     align-items: stretch;
     flex-direction: row;
@@ -450,3 +448,17 @@ body {
   padding: 0px;
 }
 
+.recycled-list-wrapper {
+  top: 50px;
+  left: 0px;
+  right: 0px;
+  bottom: 0px;
+  overflow-y: auto;
+  position: absolute;
+}
+
+.recycled-list-item-wrapper {
+  left: 0px;
+  right: 0px;
+  position: absolute;
+}
