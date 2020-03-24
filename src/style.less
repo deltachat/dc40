@@ -160,6 +160,12 @@ body {
         }
       }
 
+      .message-menu {
+        display: none;
+        position: absolute;
+        right: 20px;
+      }
+      
       .message-content {
         display: flex;
         flex-direction: row;
@@ -278,13 +284,15 @@ body {
   flex-direction: column;
 }
 
-.chat-list .recycled-list-wrapper {
+.chat-list {
+  flex: 1 1 auto;
+  width: 100%;
+  height: 100%;
   background-color: @darkBlue;
   color: @lightBlueGray;
 
   .chat-list-item {
     flex: 1;
-    height: 100%;
     display: flex;
     align-items: stretch;
     flex-direction: row;
@@ -448,17 +456,3 @@ body {
   padding: 0px;
 }
 
-.recycled-list-wrapper {
-  top: 50px;
-  left: 0px;
-  right: 0px;
-  bottom: 0px;
-  overflow-y: auto;
-  position: absolute;
-}
-
-.recycled-list-item-wrapper {
-  left: 0px;
-  right: 0px;
-  position: absolute;
-}

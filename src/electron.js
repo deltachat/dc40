@@ -56,7 +56,8 @@ function createWindow() {
       contextIsolation: true,
       enableRemoteModule: false,
       preload: path.join(app.getAppPath(), "src/preload.js")
-    }
+    },
+    icon: path.join(__dirname, '..', 'images', 'deltachat.png')
   });
 
   mainWindow.loadURL(

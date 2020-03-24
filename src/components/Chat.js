@@ -12,7 +12,12 @@ import ReactTextFormat from "react-text-format";
 import moment from "moment";
 import { isEqual } from "lodash";
 
-import { loadMessageList, sendTextMessage, sendFileMessage } from "../redux";
+import {
+  loadMessageList,
+  sendTextMessage,
+  sendFileMessage,
+  createChatById
+} from "../redux";
 import Editor from "./Editor";
 
 class Chat extends React.Component {
@@ -181,11 +186,20 @@ class Chat extends React.Component {
       >
         <div className={messageClassName} style={style}>
           {newDay}
+          <div className="message-menu">
+            <button onClick={this.onChatClick.bind(this, msg.id)}>Chat</button>
+          </div>
           <div className="message-content">{content}</div>
         </div>
       </CellMeasurer>
     );
   };
+
+  onChatClick(id) {
+    event.preventDefault();
+    console.log("Chat", id);
+    this.props.createChatById(id);
+  }
 
   isRowLoaded = ({ index }) => {
     !!this.props.messages[index];
@@ -297,7 +311,8 @@ const mapStateToProps = state => {
 const mapDispatchToProps = {
   loadMessageList,
   sendTextMessage,
-  sendFileMessage
+  sendFileMessage,
+  createChatById
 };
 
 export default connect(mapStateToProps, mapDispatchToProps, null, {

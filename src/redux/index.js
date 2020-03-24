@@ -84,6 +84,12 @@ export const sendFileMessage = (typ, path, text, mime) =>
     mime
   });
 
+export const createChatById = id =>
+  remoteAction({
+    type: "CREATE_CHAT_BY_ID",
+    id
+  });
+
 export const add = value => ({
   type: "ADD",
   value
