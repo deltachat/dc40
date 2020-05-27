@@ -90,7 +90,8 @@ export const createChatById = id =>
     id
   });
 
-export const add = value => ({
-  type: "ADD",
-  value
-});
+export const maybeNetwork = id =>
+  remoteAction({
+    type: "MAYBE_NETWORK",
+    id
+  });

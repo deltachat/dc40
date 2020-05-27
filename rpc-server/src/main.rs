@@ -1,4 +1,4 @@
-use anyhow::Result;
+use anyhow::{ensure, Result};
 use async_std::net::{TcpListener, TcpStream};
 use async_std::sync::{Arc, RwLock};
 use async_std::task;
@@ -110,6 +110,8 @@ async fn accept_connection(stream: TcpStream, local_state: Arc<RwLock<LocalState
                         local_state.send_update(write.clone()).await?;
                     }
                     Request::Import { path, email } => {
+                        ensure!(!email.is_empty(), "Missing email");
+
                         {
                             let account = Account::new(&email).await?;
                             account.subscribe(write.clone(), local_state.clone());
@@ -211,6 +213,31 @@ async fn accept_connection(stream: TcpStream, local_state: Arc<RwLock<LocalState
                         {
                             account.send_file_message(typ, path, text, mime).await?;
                             ls.send_update(write.clone()).await?;
+                        }
+                    }
+                    Request::CreateChatById { id } => {
+                        info!("creating chat by id {:?}", id);
+
+                        let ls = local_state.read().await;
+                        if let Some(account) = ls
+                            .selected_account
+                            .as_ref()
+                            .and_then(|a| ls.accounts.get(a))
+                        {
+                            account.create_chat_by_id(id).await?;
+                            ls.send_update(write.clone()).await?;
+                        }
+                    }
+                    Request::MaybeNetwork => {
+                        info!("maybe network");
+
+                        let ls = local_state.read().await;
+                        if let Some(account) = ls
+                            .selected_account
+                            .as_ref()
+                            .and_then(|a| ls.accounts.get(a))
+                        {
+                            account.maybe_network().await;
                         }
                     }
                 },

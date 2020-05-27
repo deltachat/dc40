@@ -1,14 +1,15 @@
+use std::collections::HashMap;
+
 use anyhow::Result;
 use async_std::{
     sync::{Arc, RwLock},
     task,
 };
 use async_tungstenite::tungstenite::Message;
-use deltachat::{chat::ChatId, constants::Viewtype};
+use deltachat::{chat::ChatId, constants::Viewtype, message::MsgId};
 use futures::sink::SinkExt;
 use log::{info, warn};
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 
 use crate::account::*;
 
@@ -46,6 +47,10 @@ pub enum Request {
         text: Option<String>,
         mime: Option<String>,
     },
+    #[serde(rename = "CREATE_CHAT_BY_ID")]
+    CreateChatById { id: MsgId },
+    #[serde(rename = "MAYBE_NETWORK")]
+    MaybeNetwork,
 }
 
 #[derive(Debug, Serialize)]
@@ -71,7 +76,6 @@ impl LocalState {
 
         let matcher = format!("{}/*.sqlite", HOME_DIR.display());
         for entry in task::spawn_blocking(move || glob::glob(&matcher)).await? {
-            dbg!(&entry);
             match entry {
                 Ok(path) => {
                     match path.file_stem() {
@@ -95,6 +99,8 @@ impl LocalState {
                             // attempt to configure it
                             account.configure().await?;
                             info!("configured");
+                            account.context.start_io().await;
+
                             accounts.insert(account_name.to_string(), account);
                         }
                         None => {
@@ -144,7 +150,7 @@ pub struct SharedState {
     pub selected_chat_id: Option<ChatId>,
     pub selected_chat: Option<ChatState>,
     pub selected_chat_length: usize,
-    pub chats: HashMap<usize, ChatState>,
+    pub chats: Vec<ChatState>,
     pub selected_messages_length: usize,
     pub messages: HashMap<usize, ChatMessage>,
 }
@@ -183,9 +189,18 @@ impl Response {
                 .accounts
                 .get(account_name)
                 .expect("invalid account state");
+
             let state = account.state.read().await;
+
+            let mut chat_states: Vec<_> = state
+                .chat_states
+                .iter()
+                .map(|(_id, state)| state.clone())
+                .collect();
+            chat_states.sort_unstable_by_key(|state| state.index);
+
             (
-                state.chat_states.clone(),
+                chat_states,
                 state.chatlist.len(),
                 state.selected_chat_id.clone(),
                 state.selected_chat.clone(),
@@ -193,7 +208,7 @@ impl Response {
                 state.chat_msgs.clone(),
             )
         } else {
-            (HashMap::new(), 0, None, None, 0, HashMap::new())
+            (Default::default(), 0, None, None, 0, HashMap::new())
         };
 
         Response::RemoteUpdate {

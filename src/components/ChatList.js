@@ -113,7 +113,7 @@ class ChatList extends React.Component {
                   rowRenderer={this.rowRenderer}
                   onRowsRendered={onRowsRendered}
                   ref={registerChild}
-                  width={350}
+                  width={300}
                   rowCount={chatLength}
                   rowHeight={70}
                   chats={chats}

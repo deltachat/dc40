@@ -27,7 +27,7 @@ export const remoteCombineReducers = (localReducers, remoteReducers) => {
 export const remoteMiddleware = url => store => {
   const dispatch = remoteDispatch(url, store.dispatch);
   return next => action => {
-    if (action.remote) {
+    if (action && action.remote) {
       dispatch(action);
     } else {
       next(action);
