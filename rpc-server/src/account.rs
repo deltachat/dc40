@@ -261,7 +261,14 @@ impl Account {
 
         let mut ls = self.state.write().await;
         ls.selected_chat_id = Some(chat_id);
-        ls.chat_msg_ids = chat::get_chat_msgs(&self.context, chat_id, 0, None).await;
+        ls.chat_msg_ids = chat::get_chat_msgs(&self.context, chat_id, 0, None)
+            .await
+            .into_iter()
+            .filter_map(|c| match c {
+                deltachat::chat::ChatItem::Message { msg_id } => Some(msg_id),
+                _ => None,
+            })
+            .collect();
         ls.chat_msgs = Default::default();
 
         // mark as noticed
@@ -547,7 +554,14 @@ pub async fn refresh_message_list(
         chat_id, start_index, stop_index
     );
 
-    ls.chat_msg_ids = chat::get_chat_msgs(&context, current_chat_id.unwrap(), 0, None).await;
+    ls.chat_msg_ids = chat::get_chat_msgs(&context, current_chat_id.unwrap(), 0, None)
+        .await
+        .into_iter()
+        .filter_map(|c| match c {
+            deltachat::chat::ChatItem::Message { msg_id } => Some(msg_id),
+            _ => None,
+        })
+        .collect();
 
     let mut msgs = HashMap::with_capacity(stop_index - start_index + 1);
     for (i, msg_id) in ls

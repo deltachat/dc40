@@ -1,9 +1,10 @@
 const path = require('path');
 const MiniCssExtractPlugin = require('mini-css-extract-plugin');
 const HtmlWebpackPlugin = require('html-webpack-plugin')
+const WasmPackPlugin = require('@wasm-tool/wasm-pack-plugin');
 
 module.exports = {
-  entry: ['./src/index.js'],
+  entry: './client.js',
   output: {
     filename: 'main.js',
     path: path.resolve(__dirname, 'build'),
@@ -45,17 +46,6 @@ module.exports = {
           { loader: 'css-loader' },
         ],
       },
-      {
-        test: /\.m?js$/,
-        exclude: [
-          /node_modules/,
-          path.join(__dirname, 'src/electron.js'),
-          path.join(__dirname, 'src/preload.js'),
-        ],
-        use: {
-          loader: 'babel-loader'
-        }
-      },
     ],
   },
   plugins: [
@@ -68,6 +58,10 @@ module.exports = {
       filename: '[name].css',
       chunkFilename: '[id].css',
      }),
+    new WasmPackPlugin({
+      crateDirectory: ".",
+      extraArgs: "--no-typescript",
+    })
   ],
 };
 
