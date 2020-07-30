@@ -3,14 +3,17 @@ use async_std::net::{TcpListener, TcpStream};
 use async_std::sync::{Arc, RwLock};
 use async_std::task;
 use async_tungstenite::tungstenite::Error;
+use deltachat::{chat::ChatId, message::MsgId};
 use futures::StreamExt;
 use log::{info, warn};
+use num_traits::FromPrimitive;
+use shared::*;
 
 mod account;
 mod state;
 
-use account::*;
-use state::*;
+use crate::account::*;
+use crate::state::*;
 
 fn main() {
     femme::start(log::LevelFilter::Info).unwrap();
@@ -146,7 +149,7 @@ async fn accept_connection(stream: TcpStream, local_state: Arc<RwLock<LocalState
                     Request::SelectChat { account, chat_id } => {
                         let ls = local_state.write().await;
                         if let Some(account) = ls.accounts.get(&account) {
-                            account.select_chat(chat_id).await?;
+                            account.select_chat(ChatId::new(chat_id)).await?;
                             ls.send_update(write.clone()).await?;
 
                             account.load_message_list(0, 20).await?;
@@ -211,7 +214,14 @@ async fn accept_connection(stream: TcpStream, local_state: Arc<RwLock<LocalState
                             .as_ref()
                             .and_then(|a| ls.accounts.get(a))
                         {
-                            account.send_file_message(typ, path, text, mime).await?;
+                            account
+                                .send_file_message(
+                                    Viewtype::from_i32(typ as i32).unwrap(),
+                                    path,
+                                    text,
+                                    mime,
+                                )
+                                .await?;
                             ls.send_update(write.clone()).await?;
                         }
                     }
@@ -224,7 +234,7 @@ async fn accept_connection(stream: TcpStream, local_state: Arc<RwLock<LocalState
                             .as_ref()
                             .and_then(|a| ls.accounts.get(a))
                         {
-                            account.create_chat_by_id(id).await?;
+                            account.create_chat_by_id(MsgId::new(id)).await?;
                             ls.send_update(write.clone()).await?;
                         }
                     }

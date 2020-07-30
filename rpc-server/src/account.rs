@@ -1,6 +1,8 @@
-use async_std::prelude::*;
+use std::collections::HashMap;
+use std::path::PathBuf;
 
 use anyhow::{anyhow, bail, ensure, Result};
+use async_std::prelude::*;
 use async_std::sync::{Arc, RwLock};
 use async_std::task;
 use async_tungstenite::tungstenite::Error;
@@ -9,17 +11,16 @@ use broadcaster::BroadcastChannel;
 use deltachat::{
     chat::{self, Chat, ChatId},
     chatlist::Chatlist,
-    constants::{Chattype, Viewtype},
     contact::Contact,
     context::Context,
-    message::{self, MessageState, MsgId},
+    message::{self, MsgId},
     Event,
 };
 use lazy_static::lazy_static;
 use log::{debug, error, info, warn};
-use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
-use std::path::PathBuf;
+use num_traits::{FromPrimitive, ToPrimitive};
+use serde::Serialize;
+use shared::{ChatMessage, ChatState, Login, Viewtype};
 
 use crate::state::*;
 
@@ -53,60 +54,10 @@ pub struct AccountState {
     /// Messages of the selected chat
     pub chat_msg_ids: Vec<MsgId>,
     /// State of currently selected chat messages
-    pub chat_msgs: HashMap<usize, ChatMessage>,
+    pub chat_msgs: HashMap<String, ChatMessage>,
     chat_msgs_range: (usize, usize),
     /// indexed by index in the Chatlist
     pub chats: HashMap<ChatId, Chat>,
-}
-
-#[derive(Default, Debug, Serialize, Clone, Deserialize)]
-pub struct ChatMessage {
-    id: MsgId,
-    from_id: u32,
-    from_first_name: String,
-    from_profile_image: Option<PathBuf>,
-    from_color: u32,
-    viewtype: Viewtype,
-    state: MessageState,
-    text: Option<String>,
-    starred: bool,
-    timestamp: i64,
-    is_info: bool,
-    file: Option<PathBuf>,
-    file_height: i32,
-    file_width: i32,
-}
-
-#[derive(Default, Debug, Serialize, Clone, Deserialize)]
-pub struct ChatState {
-    pub index: Option<usize>,
-    pub id: ChatId,
-    pub name: String,
-    pub header: String,
-    pub preview: String,
-    pub timestamp: i64,
-    pub state: String,
-    pub profile_image: Option<PathBuf>,
-    pub fresh_msg_cnt: usize,
-    pub can_send: bool,
-    pub is_self_talk: bool,
-    pub is_device_talk: bool,
-    pub chat_type: Chattype,
-    pub color: u32,
-}
-
-#[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone)]
-pub enum Login {
-    Success,
-    Error(String),
-    Progress(usize),
-    Not,
-}
-
-impl Default for Login {
-    fn default() -> Self {
-        Login::Not
-    }
 }
 
 impl Account {
@@ -322,7 +273,9 @@ impl Account {
         mime: Option<String>,
     ) -> Result<()> {
         if let Some(chat_id) = self.state.read().await.selected_chat_id {
-            let mut msg = message::Message::new(typ);
+            let mut msg = message::Message::new(
+                deltachat::constants::Viewtype::from_i32(typ.to_i32().unwrap()).unwrap(),
+            );
             msg.set_text(text);
             msg.set_file(path, mime.as_deref());
 
@@ -447,7 +400,6 @@ impl Account {
 }
 
 #[derive(Debug, Serialize)]
-#[serde(rename_all = "snake_case")]
 pub struct RemoteEvent {
     #[serde(rename = "type")]
     typ: String,
@@ -501,7 +453,7 @@ async fn load_chat_state(
         let index = state.chatlist.get_index_for_id(chat_id);
 
         Some(ChatState {
-            id: chat_id,
+            id: chat_id.to_u32(),
             index,
             name: chat.get_name().to_string(),
             header,
@@ -510,7 +462,7 @@ async fn load_chat_state(
             state: lot.get_state().to_string(),
             profile_image: chat.get_profile_image(&context).await.map(Into::into),
             can_send: chat.can_send(),
-            chat_type: chat.get_type(),
+            chat_type: chat.get_type().to_string(),
             color: chat.get_color(&context).await,
             is_device_talk: chat.is_device_talk(),
             is_self_talk: chat.is_self_talk(),
@@ -580,14 +532,14 @@ pub async fn refresh_message_list(
             .map_err(|err| anyhow!("failed to load contact: {}: {}", msg.get_from_id(), err))?;
 
         let chat_msg = ChatMessage {
-            id: msg.get_id(),
+            id: msg.get_id().to_u32(),
             from_id: msg.get_from_id(),
-            viewtype: msg.get_viewtype(),
+            viewtype: Viewtype::from_i32(msg.get_viewtype().to_i32().unwrap()).unwrap(),
             from_first_name: from.get_first_name().to_string(),
             from_profile_image: from.get_profile_image(&context).await.map(Into::into),
             from_color: from.get_color(),
             starred: msg.is_starred(),
-            state: msg.get_state(),
+            state: msg.get_state().to_string(),
             text: msg.get_text(),
             timestamp: msg.get_sort_timestamp(),
             is_info: msg.is_info(),
@@ -595,7 +547,7 @@ pub async fn refresh_message_list(
             file_width: msg.get_width(),
             file_height: msg.get_height(),
         };
-        msgs.insert(i, chat_msg);
+        msgs.insert(i.to_string(), chat_msg);
     }
 
     ls.chat_msgs = msgs;

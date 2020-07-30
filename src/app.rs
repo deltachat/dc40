@@ -1,116 +1,10 @@
 use anyhow::Error;
 use log::*;
-use serde_derive::{Deserialize, Serialize};
-use std::collections::HashMap;
-use std::path::PathBuf;
 use yew::format::Json;
 use yew::services::websocket::{WebSocketService, WebSocketStatus, WebSocketTask};
 use yew::{html, Component, ComponentLink, Html, Properties, ShouldRender};
 
-#[derive(Debug, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub struct SharedState {
-    pub accounts: HashMap<String, SharedAccountState>,
-    pub errors: Vec<String>,
-    pub selected_account: Option<String>,
-    pub selected_chat_id: Option<usize>,
-    pub selected_chat: Option<ChatState>,
-    pub selected_chat_length: usize,
-    pub chats: Vec<ChatState>,
-    pub selected_messages_length: usize,
-    pub messages: HashMap<String, ChatMessage>,
-}
-
-#[derive(Debug, Serialize, Clone, Deserialize, PartialEq, Properties)]
-pub struct ChatMessage {
-    id: usize,
-    from_id: u32,
-    from_first_name: String,
-    from_profile_image: Option<PathBuf>,
-    from_color: u32,
-    viewtype: String,
-    state: String,
-    text: Option<String>,
-    starred: bool,
-    timestamp: i64,
-    is_info: bool,
-    file: Option<PathBuf>,
-    file_height: i32,
-    file_width: i32,
-}
-
-#[derive(Debug, Serialize, Clone, Deserialize)]
-pub struct ChatState {
-    pub index: Option<usize>,
-    pub id: usize,
-    pub name: String,
-    pub header: String,
-    pub preview: String,
-    pub timestamp: i64,
-    pub state: String,
-    pub profile_image: Option<PathBuf>,
-    pub fresh_msg_cnt: usize,
-    pub can_send: bool,
-    pub is_self_talk: bool,
-    pub is_device_talk: bool,
-    pub chat_type: String,
-    pub color: u32,
-}
-
-#[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone)]
-pub enum Login {
-    Success,
-    Error(String),
-    Progress(usize),
-    Not,
-}
-
-#[derive(Debug, Deserialize, Serialize)]
-#[serde(rename_all = "snake_case")]
-pub struct SharedAccountState {
-    pub logged_in: Login,
-    pub email: String,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case", tag = "type")]
-pub enum WsRequest {
-    #[serde(rename = "LOGIN")]
-    Login {
-        email: String,
-        password: String,
-        remote: bool,
-    },
-    #[serde(rename = "IMPORT")]
-    Import { path: String, email: String },
-    #[serde(rename = "SELECT_CHAT")]
-    SelectChat { account: String, chat_id: usize },
-    #[serde(rename = "LOAD_CHAT_LIST")]
-    LoadChatList {
-        start_index: usize,
-        stop_index: usize,
-    },
-    #[serde(rename = "LOAD_MESSAGE_LIST")]
-    LoadMessageList {
-        start_index: usize,
-        stop_index: usize,
-    },
-    #[serde(rename = "SELECT_ACCOUNT")]
-    SelectAccount { account: String },
-    #[serde(rename = "SEND_TEXT_MESSAGE")]
-    SendTextMessage { text: String },
-    #[serde(rename = "SEND_FILE_MESSAGE")]
-    SendFileMessage {
-        typ: String,
-        path: String,
-        text: Option<String>,
-        mime: Option<String>,
-    },
-    #[serde(rename = "CREATE_CHAT_BY_ID")]
-    CreateChatById { id: usize },
-    #[serde(rename = "MAYBE_NETWORK")]
-    MaybeNetwork,
-}
+use shared::*;
 
 #[derive(Debug)]
 pub enum WsAction {
@@ -122,29 +16,15 @@ pub enum WsAction {
 #[derive(Debug)]
 pub enum Msg {
     WsAction(WsAction),
-    WsReady(Result<WsResponse, Error>),
+    WsReady(Result<Response, Error>),
     Ignore,
-    WsRequest(WsRequest),
+    WsRequest(Request),
 }
 
 impl From<WsAction> for Msg {
     fn from(action: WsAction) -> Self {
         Msg::WsAction(action)
     }
-}
-
-/// This type is an expected response from a websocket connection.
-#[derive(Deserialize, Debug)]
-#[serde(rename_all = "snake_case", tag = "type")]
-pub enum WsResponse {
-    #[serde(rename = "REMOTE_UPDATE")]
-    RemoteUpdate { state: ResponseState },
-}
-
-#[derive(Debug, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub struct ResponseState {
-    pub shared: SharedState,
 }
 
 pub struct App {
@@ -206,7 +86,7 @@ impl App {
                     let account = state.selected_account.as_ref().cloned().unwrap_or_default();
                     let chat_id = chat.id;
                     let callback = link.callback(move |_| {
-                        Msg::WsRequest(WsRequest::SelectChat {
+                        Msg::WsRequest(Request::SelectChat {
                             account: account.clone(),
                             chat_id,
                         })
@@ -364,7 +244,7 @@ impl Component for App {
                 info!("{:?}", response);
                 self.data = response
                     .map(|data| match data {
-                        WsResponse::RemoteUpdate { state } => state.shared,
+                        Response::RemoteUpdate { state } => state.shared,
                     })
                     .map_err(|err| {
                         warn!("{:?}", err);

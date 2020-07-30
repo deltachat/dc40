@@ -6,59 +6,11 @@ use async_std::{
     task,
 };
 use async_tungstenite::tungstenite::Message;
-use deltachat::{chat::ChatId, constants::Viewtype, message::MsgId};
 use futures::sink::SinkExt;
 use log::{info, warn};
-use serde::{Deserialize, Serialize};
+use shared::*;
 
 use crate::account::*;
-
-#[derive(Debug, Deserialize)]
-#[serde(rename_all = "snake_case", tag = "type")]
-pub enum Request {
-    #[serde(rename = "LOGIN")]
-    Login {
-        email: String,
-        password: String,
-        remote: bool,
-    },
-    #[serde(rename = "IMPORT")]
-    Import { path: String, email: String },
-    #[serde(rename = "SELECT_CHAT")]
-    SelectChat { account: String, chat_id: ChatId },
-    #[serde(rename = "LOAD_CHAT_LIST")]
-    LoadChatList {
-        start_index: usize,
-        stop_index: usize,
-    },
-    #[serde(rename = "LOAD_MESSAGE_LIST")]
-    LoadMessageList {
-        start_index: usize,
-        stop_index: usize,
-    },
-    #[serde(rename = "SELECT_ACCOUNT")]
-    SelectAccount { account: String },
-    #[serde(rename = "SEND_TEXT_MESSAGE")]
-    SendTextMessage { text: String },
-    #[serde(rename = "SEND_FILE_MESSAGE")]
-    SendFileMessage {
-        typ: Viewtype,
-        path: String,
-        text: Option<String>,
-        mime: Option<String>,
-    },
-    #[serde(rename = "CREATE_CHAT_BY_ID")]
-    CreateChatById { id: MsgId },
-    #[serde(rename = "MAYBE_NETWORK")]
-    MaybeNetwork,
-}
-
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "snake_case", tag = "type")]
-pub enum Response {
-    #[serde(rename = "REMOTE_UPDATE")]
-    RemoteUpdate { state: State },
-}
 
 #[derive(Debug, Default)]
 pub struct LocalState {
@@ -135,37 +87,27 @@ impl LocalState {
     }
 }
 
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "snake_case")]
-pub struct State {
-    pub shared: SharedState,
-}
+impl LocalState {
+    pub async fn send_update<T: futures::sink::Sink<Message> + Unpin + Sync + Send + 'static>(
+        &self,
+        writer: Arc<RwLock<T>>,
+    ) -> Result<()>
+    where
+        T::Error: std::fmt::Debug + std::error::Error + Send + Sync,
+    {
+        let response = self.to_response().await;
 
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "snake_case")]
-pub struct SharedState {
-    pub accounts: HashMap<String, SharedAccountState>,
-    pub errors: Vec<String>,
-    pub selected_account: Option<String>,
-    pub selected_chat_id: Option<ChatId>,
-    pub selected_chat: Option<ChatState>,
-    pub selected_chat_length: usize,
-    pub chats: Vec<ChatState>,
-    pub selected_messages_length: usize,
-    pub messages: HashMap<usize, ChatMessage>,
-}
+        writer
+            .write()
+            .await
+            .send(Message::text(serde_json::to_string(&response).unwrap()))
+            .await
+            .map_err(Into::into)
+    }
 
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "snake_case")]
-pub struct SharedAccountState {
-    pub logged_in: Login,
-    pub email: String,
-}
-
-impl Response {
-    pub async fn from_local_state(state: &LocalState) -> Self {
-        let mut accounts = HashMap::with_capacity(state.accounts.len());
-        for (email, account) in state.accounts.iter() {
+    pub async fn to_response(&self) -> Response {
+        let mut accounts = HashMap::with_capacity(self.accounts.len());
+        for (email, account) in self.accounts.iter() {
             let account = &account.state.read().await;
             accounts.insert(
                 email.clone(),
@@ -176,7 +118,7 @@ impl Response {
             );
         }
 
-        let errors = state.errors.iter().map(|e| e.to_string()).collect();
+        let errors = self.errors.iter().map(|e| e.to_string()).collect();
         let (
             chats,
             selected_chat_length,
@@ -184,8 +126,8 @@ impl Response {
             selected_chat,
             selected_messages_length,
             messages,
-        ) = if let Some(ref account_name) = state.selected_account {
-            let account = state
+        ) = if let Some(ref account_name) = self.selected_account {
+            let account = self
                 .accounts
                 .get(account_name)
                 .expect("invalid account state");
@@ -216,8 +158,8 @@ impl Response {
                 shared: SharedState {
                     accounts,
                     errors,
-                    selected_account: state.selected_account.clone(),
-                    selected_chat_id,
+                    selected_account: self.selected_account.clone(),
+                    selected_chat_id: selected_chat_id.map(|s| s.to_u32()),
                     selected_chat,
                     selected_chat_length,
                     chats,
@@ -226,24 +168,5 @@ impl Response {
                 },
             },
         }
-    }
-}
-
-impl LocalState {
-    pub async fn send_update<T: futures::sink::Sink<Message> + Unpin + Sync + Send + 'static>(
-        &self,
-        writer: Arc<RwLock<T>>,
-    ) -> Result<()>
-    where
-        T::Error: std::fmt::Debug + std::error::Error + Send + Sync,
-    {
-        let response = Response::from_local_state(self).await;
-
-        writer
-            .write()
-            .await
-            .send(Message::text(serde_json::to_string(&response).unwrap()))
-            .await
-            .map_err(Into::into)
     }
 }
