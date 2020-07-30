@@ -1,8 +1,10 @@
+use std::collections::HashMap;
+
 use anyhow::Error;
 use log::*;
 use yew::format::Json;
 use yew::services::websocket::{WebSocketService, WebSocketStatus, WebSocketTask};
-use yew::{html, Component, ComponentLink, Html, Properties, ShouldRender};
+use yew::{html, Component, ComponentLink, Html, NodeRef, Properties, ShouldRender};
 
 use shared::*;
 
@@ -93,7 +95,7 @@ impl App {
                     });
 
                     html! {
-                        <div class="chat-list-item" onclick=callback>
+                        <div class="chat-list-item" onclick=callback key=chat.id>
                             <div class="chat-icon">{image}</div>
                             <div class="chat-content">
                               <div class="chat-header">{&chat.name}</div>
@@ -117,14 +119,8 @@ impl App {
                             html! {}
                         }
                     }
-                    </div>
-                   <div class="message-list">
-                { state.messages.iter().map(|(key, msg)| {
-                    html! {
-                        <Message message=msg />
-                    }
-                }).collect::<Html>() }
-                   </div>
+                </div>
+                    <Messages messages=state.messages.clone() />
                  </div>
                </>
             }
@@ -132,6 +128,70 @@ impl App {
             html! {
                 <p>{ "Data hasn't fetched yet." }</p>
             }
+        }
+    }
+}
+
+#[derive(Properties, Clone, PartialEq)]
+struct MessagesProps {
+    messages: HashMap<String, ChatMessage>,
+}
+
+struct Messages {
+    messages: HashMap<String, ChatMessage>,
+    link: ComponentLink<Messages>,
+    messages_ref: NodeRef,
+}
+
+impl Messages {
+    fn scroll_to_bottom(&self) {
+        if let Some(el) = self.messages_ref.cast::<web_sys::Element>() {
+            let mut opts = web_sys::ScrollToOptions::new();
+            let scroll_height = el.scroll_height();
+            opts.top(scroll_height as f64);
+            el.scroll_to_with_scroll_to_options(&opts);
+        }
+    }
+}
+
+impl Component for Messages {
+    type Message = ();
+    type Properties = MessagesProps;
+
+    fn create(props: Self::Properties, link: ComponentLink<Self>) -> Self {
+        Messages {
+            messages: props.messages,
+            link,
+            messages_ref: NodeRef::default(),
+        }
+    }
+
+    fn update(&mut self, _msg: Self::Message) -> ShouldRender {
+        true
+    }
+
+    fn change(&mut self, props: Self::Properties) -> ShouldRender {
+        if self.messages != props.messages {
+            self.messages = props.messages;
+            true
+        } else {
+            false
+        }
+    }
+
+    fn rendered(&mut self, _first_render: bool) {
+        self.scroll_to_bottom();
+    }
+
+    fn view(&self) -> Html {
+        html! {
+            <div class="message-list" ref=self.messages_ref.clone()>
+            { self.messages.iter().map(|(key, msg)| {
+                html! {
+                    <Message message=msg />
+                }
+            }).collect::<Html>() }
+            </div>
         }
     }
 }
@@ -185,7 +245,7 @@ impl Component for Message {
         };
 
         html! {
-            <div class="message">
+            <div class="message" key=msg.id>
                 <div class="message-text">
                 <div class="message-icon">{image}</div>
                 <div class="message-body">
@@ -219,7 +279,6 @@ impl Component for App {
     }
 
     fn update(&mut self, msg: Self::Message) -> ShouldRender {
-        info!("{:?}", msg);
         match msg {
             Msg::WsAction(action) => match action {
                 WsAction::Connect => {
@@ -241,7 +300,6 @@ impl Component for App {
                 }
             },
             Msg::WsReady(response) => {
-                info!("{:?}", response);
                 self.data = response
                     .map(|data| match data {
                         Response::RemoteUpdate { state } => state.shared,

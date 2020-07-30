@@ -104,10 +104,7 @@ pub enum Request {
         start_index: usize,
         stop_index: usize,
     },
-    LoadMessageList {
-        start_index: usize,
-        stop_index: usize,
-    },
+    LoadMessageList,
     SelectAccount {
         account: String,
     },

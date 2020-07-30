@@ -152,7 +152,7 @@ async fn accept_connection(stream: TcpStream, local_state: Arc<RwLock<LocalState
                             account.select_chat(ChatId::new(chat_id)).await?;
                             ls.send_update(write.clone()).await?;
 
-                            account.load_message_list(0, 20).await?;
+                            account.load_message_list().await?;
                             ls.send_update(write.clone()).await?;
                         }
                     }
@@ -170,17 +170,14 @@ async fn accept_connection(stream: TcpStream, local_state: Arc<RwLock<LocalState
                             ls.send_update(write.clone()).await?;
                         }
                     }
-                    Request::LoadMessageList {
-                        start_index,
-                        stop_index,
-                    } => {
+                    Request::LoadMessageList {} => {
                         let ls = local_state.read().await;
                         if let Some(account) = ls
                             .selected_account
                             .as_ref()
                             .and_then(|a| ls.accounts.get(a))
                         {
-                            account.load_message_list(start_index, stop_index).await?;
+                            account.load_message_list().await?;
                             ls.send_update(write.clone()).await?;
                         }
                     }

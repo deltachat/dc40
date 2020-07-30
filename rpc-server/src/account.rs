@@ -55,7 +55,6 @@ pub struct AccountState {
     pub chat_msg_ids: Vec<MsgId>,
     /// State of currently selected chat messages
     pub chat_msgs: HashMap<String, ChatMessage>,
-    chat_msgs_range: (usize, usize),
     /// indexed by index in the Chatlist
     pub chats: HashMap<ChatId, Chat>,
 }
@@ -100,7 +99,6 @@ impl Account {
                 selected_chat: None,
                 selected_chat_id: None,
                 chatlist,
-                chat_msgs_range: (0, 0),
                 chat_msg_ids: Default::default(),
                 chat_msgs: Default::default(),
                 chat_states: Default::default(),
@@ -236,13 +234,7 @@ impl Account {
         Ok(())
     }
 
-    pub async fn load_message_list(&self, start_index: usize, stop_index: usize) -> Result<()> {
-        ensure!(start_index <= stop_index, "invalid indicies");
-        {
-            let mut ls = self.state.write().await;
-            ls.chat_msgs_range = (start_index, stop_index);
-        }
-
+    pub async fn load_message_list(&self) -> Result<()> {
         refresh_message_list(self.context.clone(), self.state.clone(), None).await?;
 
         // markseen messages that we load
@@ -500,11 +492,7 @@ pub async fn refresh_message_list(
         return Ok(());
     }
 
-    let (start_index, stop_index) = ls.chat_msgs_range;
-    info!(
-        "loading chat messages {:?} - {}..{}",
-        chat_id, start_index, stop_index
-    );
+    info!("loading chat messages {:?}", chat_id);
 
     ls.chat_msg_ids = chat::get_chat_msgs(&context, current_chat_id.unwrap(), 0, None)
         .await
@@ -515,14 +503,8 @@ pub async fn refresh_message_list(
         })
         .collect();
 
-    let mut msgs = HashMap::with_capacity(stop_index - start_index + 1);
-    for (i, msg_id) in ls
-        .chat_msg_ids
-        .iter()
-        .enumerate()
-        .skip(start_index)
-        .take(stop_index - start_index + 1)
-    {
+    let mut msgs = HashMap::with_capacity(ls.chat_msg_ids.len());
+    for (i, msg_id) in ls.chat_msg_ids.iter().enumerate() {
         let msg = message::Message::load_from_db(&context, *msg_id)
             .await
             .map_err(|err| anyhow!("failed to load msg: {}: {}", msg_id, err))?;
