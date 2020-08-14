@@ -25,7 +25,9 @@ version = "0.3.4"
 features = [
   'KeyboardEvent',
   'Element',
-  'ScrollToOptions'
+  'ScrollToOptions',
+  'UiEvent',
+  'HtmlInputElement'
 ]
 
 [dev-dependencies]

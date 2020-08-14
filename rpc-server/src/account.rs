@@ -14,7 +14,7 @@ use deltachat::{
     contact::Contact,
     context::Context,
     message::{self, MsgId},
-    Event,
+    Event, EventType,
 };
 use lazy_static::lazy_static;
 use log::{debug, error, info, warn};
@@ -51,10 +51,11 @@ pub struct AccountState {
     pub selected_chat: Option<ChatState>,
     pub selected_chat_id: Option<ChatId>,
     pub chatlist: Chatlist,
-    /// Messages of the selected chat
+    /// All message ids of the selected chat.
     pub chat_msg_ids: Vec<MsgId>,
     /// State of currently selected chat messages
-    pub chat_msgs: HashMap<String, ChatMessage>,
+    pub chat_msgs: Vec<ChatMessage>,
+    pub chat_msgs_range: (usize, usize),
     /// indexed by index in the Chatlist
     pub chats: HashMap<ChatId, Chat>,
 }
@@ -71,7 +72,7 @@ impl Account {
             async_std::fs::create_dir_all(parent).await?;
         }
 
-        let context = Context::new("desktop".into(), path.into())
+        let context = Context::new("desktop".into(), path.into(), 0)
             .await
             .map_err(|err| anyhow!("{:?}", err))?;
 
@@ -101,6 +102,7 @@ impl Account {
                 chatlist,
                 chat_msg_ids: Default::default(),
                 chat_msgs: Default::default(),
+                chat_msgs_range: (0, 0),
                 chat_states: Default::default(),
             })),
             events: receiver,
@@ -122,11 +124,11 @@ impl Account {
 
         let mut events = self.events.clone();
         while let Some(event) = events.next().await {
-            match event {
-                Event::ImexProgress(0) => {
+            match event.typ {
+                EventType::ImexProgress(0) => {
                     bail!("Failed to import");
                 }
-                Event::ImexProgress(1000) => {
+                EventType::ImexProgress(1000) => {
                     self.context.start_io().await;
                     break;
                 }
@@ -165,14 +167,14 @@ impl Account {
         let mut events = self.events.clone();
         while let Some(event) = events.next().await {
             info!("configure event {:?}", event);
-            match event {
-                Event::ConfigureProgress(0) => {
+            match event.typ {
+                EventType::ConfigureProgress(0) => {
                     bail!("Failed to login");
                 }
-                Event::ConfigureProgress(1000) => {
+                EventType::ConfigureProgress(1000) => {
                     break;
                 }
-                Event::ImapConnected(_) | Event::SmtpConnected(_) => {
+                EventType::ImapConnected(_) | EventType::SmtpConnected(_) => {
                     break;
                 }
                 _ => {}
@@ -219,6 +221,7 @@ impl Account {
             })
             .collect();
         ls.chat_msgs = Default::default();
+        ls.chat_msgs_range = (0, 0);
 
         // mark as noticed
         chat::marknoticed_chat(&self.context, chat_id)
@@ -234,7 +237,14 @@ impl Account {
         Ok(())
     }
 
-    pub async fn load_message_list(&self) -> Result<()> {
+    pub async fn load_message_list(&self, range: Option<(usize, usize)>) -> Result<()> {
+        let len = self.state.read().await.chat_msg_ids.len();
+        let range = range.unwrap_or_else(|| (len.saturating_sub(20), len));
+
+        {
+            self.state.write().await.chat_msgs_range = range;
+        }
+
         refresh_message_list(self.context.clone(), self.state.clone(), None).await?;
 
         // markseen messages that we load
@@ -309,38 +319,38 @@ impl Account {
         task::spawn(async move {
             // subscribe to events
             while let Some(event) = events.next().await {
-                let res = match event {
-                    Event::ConfigureProgress(0) => {
+                let res = match event.typ {
+                    EventType::ConfigureProgress(0) => {
                         state.write().await.logged_in = Login::Error("failed to login".into());
                         let local_state = local_state.read().await;
                         local_state.send_update(writer.clone()).await
                     }
-                    Event::ImexProgress(0) => {
+                    EventType::ImexProgress(0) => {
                         state.write().await.logged_in = Login::Error("failed to import".into());
                         let local_state = local_state.read().await;
                         local_state.send_update(writer.clone()).await
                     }
-                    Event::ConfigureProgress(1000)
-                    | Event::ImexProgress(1000)
-                    | Event::ImapConnected(_)
-                    | Event::SmtpConnected(_) => {
+                    EventType::ConfigureProgress(1000)
+                    | EventType::ImexProgress(1000)
+                    | EventType::ImapConnected(_)
+                    | EventType::SmtpConnected(_) => {
                         info!("logged in");
                         state.write().await.logged_in = Login::Success;
                         let local_state = local_state.read().await;
                         local_state.send_update(writer.clone()).await
                     }
-                    Event::ConfigureProgress(i) | Event::ImexProgress(i) => {
+                    EventType::ConfigureProgress(i) | EventType::ImexProgress(i) => {
                         info!("configure progres: {}/1000", i);
                         state.write().await.logged_in = Login::Progress(i);
                         let local_state = local_state.read().await;
                         local_state.send_update(writer.clone()).await
                     }
-                    Event::MsgsChanged { chat_id, .. }
-                    | Event::IncomingMsg { chat_id, .. }
-                    | Event::MsgDelivered { chat_id, .. }
-                    | Event::MsgRead { chat_id, .. }
-                    | Event::MsgFailed { chat_id, .. }
-                    | Event::ChatModified(chat_id) => {
+                    EventType::MsgsChanged { chat_id, .. }
+                    | EventType::IncomingMsg { chat_id, .. }
+                    | EventType::MsgDelivered { chat_id, .. }
+                    | EventType::MsgRead { chat_id, .. }
+                    | EventType::MsgFailed { chat_id, .. }
+                    | EventType::ChatModified(chat_id) => {
                         let res =
                             refresh_message_list(context.clone(), state.clone(), Some(chat_id))
                                 .try_join(refresh_chat_list(context.clone(), state.clone()))
@@ -358,15 +368,15 @@ impl Account {
                             local_state.send_update(writer.clone()).await
                         }
                     }
-                    Event::Info(msg) => {
+                    EventType::Info(msg) => {
                         info!("{}", msg);
                         Ok(())
                     }
-                    Event::Warning(msg) => {
+                    EventType::Warning(msg) => {
                         warn!("{}", msg);
                         Ok(())
                     }
-                    Event::Error(msg) => {
+                    EventType::Error(msg) => {
                         error!("{}", msg);
                         Ok(())
                     }
@@ -492,7 +502,11 @@ pub async fn refresh_message_list(
         return Ok(());
     }
 
-    info!("loading chat messages {:?}", chat_id);
+    let range = ls.chat_msgs_range;
+    info!(
+        "loading chat messages {:?} from ({}..={})",
+        chat_id, range.0, range.1
+    );
 
     ls.chat_msg_ids = chat::get_chat_msgs(&context, current_chat_id.unwrap(), 0, None)
         .await
@@ -503,8 +517,10 @@ pub async fn refresh_message_list(
         })
         .collect();
 
-    let mut msgs = HashMap::with_capacity(ls.chat_msg_ids.len());
-    for (i, msg_id) in ls.chat_msg_ids.iter().enumerate() {
+    let len = range.1.saturating_sub(range.0);
+    let offset = range.0;
+    let mut msgs = Vec::with_capacity(len);
+    for msg_id in ls.chat_msg_ids.iter().skip(offset).take(len) {
         let msg = message::Message::load_from_db(&context, *msg_id)
             .await
             .map_err(|err| anyhow!("failed to load msg: {}: {}", msg_id, err))?;
@@ -529,7 +545,7 @@ pub async fn refresh_message_list(
             file_width: msg.get_width(),
             file_height: msg.get_height(),
         };
-        msgs.insert(i.to_string(), chat_msg);
+        msgs.push(chat_msg);
     }
 
     ls.chat_msgs = msgs;

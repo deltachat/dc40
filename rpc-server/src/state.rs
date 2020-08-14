@@ -125,6 +125,7 @@ impl LocalState {
             selected_chat_id,
             selected_chat,
             selected_messages_length,
+            selected_messages_range,
             messages,
         ) = if let Some(ref account_name) = self.selected_account {
             let account = self
@@ -147,10 +148,11 @@ impl LocalState {
                 state.selected_chat_id.clone(),
                 state.selected_chat.clone(),
                 state.chat_msg_ids.len(),
+                state.chat_msgs_range,
                 state.chat_msgs.clone(),
             )
         } else {
-            (Default::default(), 0, None, None, 0, HashMap::new())
+            (Default::default(), 0, None, None, 0, (0, 0), Vec::new())
         };
 
         Response::RemoteUpdate {
@@ -165,6 +167,7 @@ impl LocalState {
                     chats,
                     messages,
                     selected_messages_length,
+                    selected_messages_range,
                 },
             },
         }

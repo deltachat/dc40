@@ -25,7 +25,8 @@ pub struct SharedState {
     pub selected_chat_length: usize,
     pub chats: Vec<ChatState>,
     pub selected_messages_length: usize,
-    pub messages: HashMap<String, ChatMessage>,
+    pub selected_messages_range: (usize, usize),
+    pub messages: Vec<ChatMessage>,
 }
 
 #[derive(Debug, Serialize, Clone, Deserialize, PartialEq)]
@@ -104,7 +105,10 @@ pub enum Request {
         start_index: usize,
         stop_index: usize,
     },
-    LoadMessageList,
+    LoadMessageList {
+        start_index: usize,
+        stop_index: usize,
+    },
     SelectAccount {
         account: String,
     },
