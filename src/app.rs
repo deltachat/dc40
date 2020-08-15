@@ -1,6 +1,6 @@
 use anyhow::Error;
 use log::*;
-use yew::format::Json;
+use yew::format::Bincode;
 use yew::services::websocket::{WebSocketService, WebSocketStatus, WebSocketTask};
 use yew::{html, Component, ComponentLink, Html, NodeRef, ShouldRender};
 
@@ -191,14 +191,17 @@ impl Component for App {
         match msg {
             Msg::WsAction(action) => match action {
                 WsAction::Connect => {
-                    let callback = self.link.callback(|Json(data)| Msg::WsReady(data));
+                    let callback = self.link.callback(|Bincode(data)| Msg::WsReady(data));
                     let notification = self.link.callback(|status| match status {
                         WebSocketStatus::Opened => Msg::Ignore,
                         WebSocketStatus::Closed | WebSocketStatus::Error => WsAction::Lost.into(),
                     });
-                    let task =
-                        WebSocketService::connect("ws://localhost:8080/", callback, notification)
-                            .unwrap();
+                    let task = WebSocketService::connect_binary(
+                        "ws://localhost:8080/",
+                        callback,
+                        notification,
+                    )
+                    .unwrap();
                     self.ws = Some(task);
                 }
                 WsAction::Disconnect => {
@@ -224,7 +227,7 @@ impl Component for App {
             }
             Msg::WsRequest(req) => {
                 if let Some(ws) = self.ws.as_mut() {
-                    ws.send(Json(&req));
+                    ws.send_binary(Bincode(&req));
                 }
             }
         }

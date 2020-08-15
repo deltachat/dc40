@@ -15,11 +15,11 @@ serde = { version = "1", features = ["derive"] }
 wasm-bindgen = "0.2.58"
 wasm-logger = "0.2"
 wee_alloc = { version = "0.4.4", optional = true }
-yew = "0.17"
+yew = { version = "0.17", features = ["bincode"] }
 anyhow = "1.0.32"
-serde_json = "1.0.57"
 shared = { path = "./shared" }
 yewtil = "0.3.0"
+time = { version = "0.2", default-features = false, features = ["serde"] }
 
 [dependencies.web-sys]
 version = "0.3.4"

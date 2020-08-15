@@ -100,7 +100,7 @@ impl LocalState {
         writer
             .write()
             .await
-            .send(Message::text(serde_json::to_string(&response).unwrap()))
+            .send(Message::binary(bincode::serialize(&response).unwrap()))
             .await
             .map_err(Into::into)
     }

@@ -82,7 +82,7 @@ impl Component for Message {
                     <div class="message-header">
                     <div class="message-sender">{&msg.from_first_name}</div>
                     <div class="message-timestamp">
-                {msg.timestamp}
+                {msg.timestamp.format("%R")}
                 </div>
                     </div>
                 { file }

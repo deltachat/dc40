@@ -72,189 +72,190 @@ async fn accept_connection(stream: TcpStream, local_state: Arc<RwLock<LocalState
 
     while let Some(msg) = read.next().await {
         let msg = msg?;
-        info!("got msg: {:?}", &msg);
-        if msg.is_text() {
-            let parsed: std::result::Result<Request, _> = serde_json::from_str(msg.to_text()?);
-            match parsed {
-                Ok(request) => match request {
-                    Request::Login {
-                        email, password, ..
-                    } => {
-                        let email = email.to_lowercase();
-                        {
-                            let account = Account::new(&email).await?;
-                            account.subscribe(write.clone(), local_state.clone());
-                            let mut local_state = local_state.write().await;
-                            local_state.accounts.insert(email.clone(), account);
-                        };
+        if !msg.is_binary() {
+            warn!("ignoring unknown message {:?}", &msg);
+            continue;
+        }
+        let parsed: std::result::Result<Request, _> = bincode::deserialize(&msg.into_data());
+        match parsed {
+            Ok(request) => match request {
+                Request::Login {
+                    email, password, ..
+                } => {
+                    let email = email.to_lowercase();
+                    {
+                        let account = Account::new(&email).await?;
+                        account.subscribe(write.clone(), local_state.clone());
+                        let mut local_state = local_state.write().await;
+                        local_state.accounts.insert(email.clone(), account);
+                    };
 
-                        {
-                            let res = local_state
-                                .read()
-                                .await
-                                .accounts
-                                .get(&email)
-                                .unwrap()
-                                .login(&email, &password)
-                                .await;
-                            if let Err(err) = res {
-                                let mut ls = local_state.write().await;
-                                ls.errors.push(err);
-                                ls.accounts.remove(&email);
-                            }
-                        }
-
-                        {
-                            if let Some(account) = local_state.read().await.accounts.get(&email) {
-                                account.load_chat_list(0, 10).await?;
-                            }
-                        }
-                        let local_state = local_state.read().await;
-                        local_state.send_update(write.clone()).await?;
-                    }
-                    Request::Import { path, email } => {
-                        ensure!(!email.is_empty(), "Missing email");
-
-                        {
-                            let account = Account::new(&email).await?;
-                            account.subscribe(write.clone(), local_state.clone());
-                            let mut local_state = local_state.write().await;
-                            local_state.accounts.insert(email.clone(), account);
-                        };
-
-                        {
-                            let res = local_state
-                                .read()
-                                .await
-                                .accounts
-                                .get(&email)
-                                .unwrap()
-                                .import(&path)
-                                .await;
-                            if let Err(err) = res {
-                                let mut ls = local_state.write().await;
-                                ls.errors.push(err);
-                                ls.accounts.remove(&email);
-                            }
-                        }
-
-                        {
-                            if let Some(account) = local_state.read().await.accounts.get(&email) {
-                                account.load_chat_list(0, 10).await?;
-                            }
-                        }
-                        let local_state = local_state.read().await;
-                        local_state.send_update(write.clone()).await?;
-                    }
-                    Request::SelectChat { account, chat_id } => {
-                        let ls = local_state.write().await;
-                        if let Some(account) = ls.accounts.get(&account) {
-                            account.select_chat(ChatId::new(chat_id)).await?;
-                            ls.send_update(write.clone()).await?;
-
-                            account.load_message_list(None).await?;
-                            ls.send_update(write.clone()).await?;
+                    {
+                        let res = local_state
+                            .read()
+                            .await
+                            .accounts
+                            .get(&email)
+                            .unwrap()
+                            .login(&email, &password)
+                            .await;
+                        if let Err(err) = res {
+                            let mut ls = local_state.write().await;
+                            ls.errors.push(err);
+                            ls.accounts.remove(&email);
                         }
                     }
-                    Request::LoadChatList {
-                        start_index,
-                        stop_index,
-                    } => {
-                        let ls = local_state.read().await;
-                        if let Some(account) = ls
-                            .selected_account
-                            .as_ref()
-                            .and_then(|a| ls.accounts.get(a))
-                        {
-                            account.load_chat_list(start_index, stop_index).await?;
-                            ls.send_update(write.clone()).await?;
-                        }
-                    }
-                    Request::LoadMessageList {
-                        start_index,
-                        stop_index,
-                    } => {
-                        let ls = local_state.read().await;
-                        if let Some(account) = ls
-                            .selected_account
-                            .as_ref()
-                            .and_then(|a| ls.accounts.get(a))
-                        {
-                            account
-                                .load_message_list(Some((start_index, stop_index)))
-                                .await?;
-                            ls.send_update(write.clone()).await?;
-                        }
-                    }
-                    Request::SelectAccount { account } => {
-                        info!("selecting account {}", account);
 
-                        let mut ls = local_state.write().await;
-                        ls.selected_account = Some(account);
+                    {
+                        if let Some(account) = local_state.read().await.accounts.get(&email) {
+                            account.load_chat_list(0, 10).await?;
+                        }
+                    }
+                    let local_state = local_state.read().await;
+                    local_state.send_update(write.clone()).await?;
+                }
+                Request::Import { path, email } => {
+                    ensure!(!email.is_empty(), "Missing email");
+
+                    {
+                        let account = Account::new(&email).await?;
+                        account.subscribe(write.clone(), local_state.clone());
+                        let mut local_state = local_state.write().await;
+                        local_state.accounts.insert(email.clone(), account);
+                    };
+
+                    {
+                        let res = local_state
+                            .read()
+                            .await
+                            .accounts
+                            .get(&email)
+                            .unwrap()
+                            .import(&path)
+                            .await;
+                        if let Err(err) = res {
+                            let mut ls = local_state.write().await;
+                            ls.errors.push(err);
+                            ls.accounts.remove(&email);
+                        }
+                    }
+
+                    {
+                        if let Some(account) = local_state.read().await.accounts.get(&email) {
+                            account.load_chat_list(0, 10).await?;
+                        }
+                    }
+                    let local_state = local_state.read().await;
+                    local_state.send_update(write.clone()).await?;
+                }
+                Request::SelectChat { account, chat_id } => {
+                    let ls = local_state.write().await;
+                    if let Some(account) = ls.accounts.get(&account) {
+                        account.select_chat(ChatId::new(chat_id)).await?;
+                        ls.send_update(write.clone()).await?;
+
+                        account.load_message_list(None).await?;
                         ls.send_update(write.clone()).await?;
                     }
-                    Request::SendTextMessage { text } => {
-                        let ls = local_state.read().await;
-                        if let Some(account) = ls
-                            .selected_account
-                            .as_ref()
-                            .and_then(|a| ls.accounts.get(a))
-                        {
-                            account.send_text_message(text).await?;
-                            ls.send_update(write.clone()).await?;
-                        }
+                }
+                Request::LoadChatList {
+                    start_index,
+                    stop_index,
+                } => {
+                    let ls = local_state.read().await;
+                    if let Some(account) = ls
+                        .selected_account
+                        .as_ref()
+                        .and_then(|a| ls.accounts.get(a))
+                    {
+                        account.load_chat_list(start_index, stop_index).await?;
+                        ls.send_update(write.clone()).await?;
                     }
-                    Request::SendFileMessage {
-                        typ,
-                        path,
-                        text,
-                        mime,
-                    } => {
-                        let ls = local_state.read().await;
-                        if let Some(account) = ls
-                            .selected_account
-                            .as_ref()
-                            .and_then(|a| ls.accounts.get(a))
-                        {
-                            account
-                                .send_file_message(
-                                    Viewtype::from_i32(typ as i32).unwrap(),
-                                    path,
-                                    text,
-                                    mime,
-                                )
-                                .await?;
-                            ls.send_update(write.clone()).await?;
-                        }
+                }
+                Request::LoadMessageList {
+                    start_index,
+                    stop_index,
+                } => {
+                    let ls = local_state.read().await;
+                    if let Some(account) = ls
+                        .selected_account
+                        .as_ref()
+                        .and_then(|a| ls.accounts.get(a))
+                    {
+                        account
+                            .load_message_list(Some((start_index, stop_index)))
+                            .await?;
+                        ls.send_update(write.clone()).await?;
                     }
-                    Request::CreateChatById { id } => {
-                        info!("creating chat by id {:?}", id);
+                }
+                Request::SelectAccount { account } => {
+                    info!("selecting account {}", account);
 
-                        let ls = local_state.read().await;
-                        if let Some(account) = ls
-                            .selected_account
-                            .as_ref()
-                            .and_then(|a| ls.accounts.get(a))
-                        {
-                            account.create_chat_by_id(MsgId::new(id)).await?;
-                            ls.send_update(write.clone()).await?;
-                        }
+                    let mut ls = local_state.write().await;
+                    ls.selected_account = Some(account);
+                    ls.send_update(write.clone()).await?;
+                }
+                Request::SendTextMessage { text } => {
+                    let ls = local_state.read().await;
+                    if let Some(account) = ls
+                        .selected_account
+                        .as_ref()
+                        .and_then(|a| ls.accounts.get(a))
+                    {
+                        account.send_text_message(text).await?;
+                        ls.send_update(write.clone()).await?;
                     }
-                    Request::MaybeNetwork => {
-                        info!("maybe network");
+                }
+                Request::SendFileMessage {
+                    typ,
+                    path,
+                    text,
+                    mime,
+                } => {
+                    let ls = local_state.read().await;
+                    if let Some(account) = ls
+                        .selected_account
+                        .as_ref()
+                        .and_then(|a| ls.accounts.get(a))
+                    {
+                        account
+                            .send_file_message(
+                                Viewtype::from_i32(typ as i32).unwrap(),
+                                path,
+                                text,
+                                mime,
+                            )
+                            .await?;
+                        ls.send_update(write.clone()).await?;
+                    }
+                }
+                Request::CreateChatById { id } => {
+                    info!("creating chat by id {:?}", id);
 
-                        let ls = local_state.read().await;
-                        if let Some(account) = ls
-                            .selected_account
-                            .as_ref()
-                            .and_then(|a| ls.accounts.get(a))
-                        {
-                            account.maybe_network().await;
-                        }
+                    let ls = local_state.read().await;
+                    if let Some(account) = ls
+                        .selected_account
+                        .as_ref()
+                        .and_then(|a| ls.accounts.get(a))
+                    {
+                        account.create_chat_by_id(MsgId::new(id)).await?;
+                        ls.send_update(write.clone()).await?;
                     }
-                },
-                Err(err) => warn!("invalid msg {}", err),
-            }
+                }
+                Request::MaybeNetwork => {
+                    info!("maybe network");
+
+                    let ls = local_state.read().await;
+                    if let Some(account) = ls
+                        .selected_account
+                        .as_ref()
+                        .and_then(|a| ls.accounts.get(a))
+                    {
+                        account.maybe_network().await;
+                    }
+                }
+            },
+            Err(err) => warn!("invalid msg {}", err),
         }
     }
 

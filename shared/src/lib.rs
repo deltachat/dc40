@@ -5,7 +5,6 @@ use std::path::PathBuf;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
-#[serde(tag = "type")]
 pub enum Response {
     RemoteUpdate { state: State },
 }
@@ -40,7 +39,7 @@ pub struct ChatMessage {
     pub state: String,
     pub text: Option<String>,
     pub starred: bool,
-    pub timestamp: i64,
+    pub timestamp: time::OffsetDateTime,
     pub is_info: bool,
     pub file: Option<PathBuf>,
     pub file_height: i32,
@@ -54,7 +53,7 @@ pub struct ChatState {
     pub name: String,
     pub header: String,
     pub preview: String,
-    pub timestamp: i64,
+    pub timestamp: time::OffsetDateTime,
     pub state: String,
     pub profile_image: Option<PathBuf>,
     pub fresh_msg_cnt: usize,
@@ -86,7 +85,6 @@ pub struct SharedAccountState {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-#[serde(tag = "type")]
 pub enum Request {
     Login {
         email: String,
