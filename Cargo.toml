@@ -19,6 +19,7 @@ yew = "0.17"
 anyhow = "1.0.32"
 serde_json = "1.0.57"
 shared = { path = "./shared" }
+yewtil = "0.3.0"
 
 [dependencies.web-sys]
 version = "0.3.4"

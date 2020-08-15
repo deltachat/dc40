@@ -919,6 +919,7 @@ dependencies = [
  "web-sys",
  "wee_alloc",
  "yew",
+ "yewtil",
 ]
 
 [[package]]
@@ -3825,6 +3826,19 @@ dependencies = [
  "proc-macro2 1.0.19",
  "quote 1.0.7",
  "syn 1.0.38",
+]
+
+[[package]]
+name = "yewtil"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bf437d08b3267acb36755fc5e2fb77bbfccc1697db2e3a2bd48ae9837a43050e"
+dependencies = [
+ "futures 0.3.5",
+ "log",
+ "wasm-bindgen",
+ "wasm-bindgen-futures",
+ "yew",
 ]
 
 [[package]]
