@@ -20,6 +20,7 @@ pub struct Messages {
     messages_ref: NodeRef,
     scroll_bottom_next: bool,
     scroll: (i32, i32),
+    loading: bool,
 }
 
 impl Messages {
@@ -60,11 +61,12 @@ impl Component for Messages {
             messages_ref: NodeRef::default(),
             scroll_bottom_next: true,
             scroll: (0, 0),
+            loading: false,
         }
     }
 
     fn update(&mut self, msg: Self::Message) -> ShouldRender {
-        let batch_size = 50;
+        let batch_size = 30;
         let max_window_size = 3 * batch_size;
 
         // At which pixel distance we start loading
@@ -80,6 +82,9 @@ impl Component for Messages {
                 let messages_len = **messages_len;
 
                 info!("-----");
+                if self.loading {
+                    return false;
+                }
 
                 let range = if **messages_range == (0, 0) {
                     let init = (messages_len.saturating_sub(batch_size), messages_len);
@@ -104,7 +109,14 @@ impl Component for Messages {
                     self.scroll = (el.scroll_top(), el.scroll_height() - el.client_height());
 
                     // element.scrollHeight - element.scrollTop === element.clientHeight
-                    let is_end = el.scroll_height() - el.scroll_top() == el.client_height();
+                    info!(
+                        "{}, {}, {}",
+                        el.scroll_height() - el.scroll_top(),
+                        el.client_height(),
+                        max_top_pixels
+                    );
+                    let is_end =
+                        el.scroll_height() - el.scroll_top() <= el.client_height() + max_top_pixels;
 
                     if from_top < max_top_pixels {
                         // need to move to window upwards
@@ -128,19 +140,18 @@ impl Component for Messages {
                     } else if is_end {
                         info!("Load more (bottom) {} ({:?})", from_bottom, *messages_range);
 
-                        // let stop_index = if messages_len.saturating_sub(messages_range.1) < 20 {
-                        //     messages_len
-                        // } else {
-                        //     messages_range.1 + 20
-                        // };
-                        // let len = (stop_index.saturating_sub(messages_range.0)).max(50);
-                        // let start_index = stop_index.saturating_sub(len);
+                        let current_window_size = messages_range.1 - messages_range.0;
 
-                        // self.send_app_message(Msg::WsRequest(Request::LoadMessageList {
-                        //     start_index,
-                        //     stop_index,
-                        // }));
-                        None
+                        let stop_index = (messages_range.1 + batch_size).min(messages_len);
+
+                        let start_index = if current_window_size > max_window_size {
+                            // remove one batch from the top
+                            (messages_range.0 + batch_size).min(stop_index - batch_size)
+                        } else {
+                            messages_range.0
+                        };
+
+                        Some((start_index, stop_index))
                     } else {
                         None
                     }
@@ -148,6 +159,7 @@ impl Component for Messages {
 
                 if let Some(range) = range {
                     if range.0 != messages_range.0 || range.1 != messages_range.1 {
+                        self.loading = true;
                         self.props.fetch_callback.emit(range);
                     }
                 }
@@ -162,6 +174,7 @@ impl Component for Messages {
         let new_props = self.props.neq_assign(props);
         if new_props {
             self.scroll_bottom_next = chat_id_changed;
+            self.loading = false;
         }
         new_props
     }
