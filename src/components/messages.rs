@@ -1,16 +1,16 @@
 use log::*;
 use shared::*;
 use yew::{html, Callback, Component, ComponentLink, Html, NodeRef, Properties, ShouldRender};
-use yewtil::NeqAssign;
+use yewtil::{ptr::Irc, NeqAssign};
 
 use crate::components::message::Message;
 
 #[derive(Properties, Clone, PartialEq)]
 pub struct Props {
-    pub messages: Vec<ChatMessage>,
-    pub messages_len: usize,
-    pub messages_range: (usize, usize),
-    pub selected_chat_id: Option<u32>,
+    pub messages: Irc<Vec<ChatMessage>>,
+    pub messages_range: Irc<(usize, usize)>,
+    pub messages_len: Irc<usize>,
+    pub selected_chat_id: Irc<Option<u32>>,
     pub fetch_callback: Callback<(usize, usize)>,
 }
 
@@ -64,53 +64,92 @@ impl Component for Messages {
     }
 
     fn update(&mut self, msg: Self::Message) -> ShouldRender {
+        let batch_size = 50;
+        let max_window_size = 3 * batch_size;
+
+        // At which pixel distance we start loading
+        let max_top_pixels = 20;
+
         match msg {
             Msg::OnScroll(_ev) => {
-                let el = self.messages_div();
-
-                let from_top = el.scroll_top();
-                let from_bottom = el.scroll_height() - el.scroll_top();
-                self.scroll = (el.scroll_top(), el.scroll_height() - el.client_height());
-
-                // element.scrollHeight - element.scrollTop === element.clientHeight
-                let is_end = el.scroll_height() - el.scroll_top() == el.client_height();
-
                 let Props {
-                    messages_len,
                     messages_range,
+                    messages_len,
                     ..
-                } = self.props;
+                } = &self.props;
+                let messages_len = **messages_len;
 
-                if from_top < 20 && messages_range.0 > 0 {
-                    info!("Load more (top) {}", from_top);
+                info!("-----");
 
-                    let start_index = if messages_range.0 < 20 {
-                        0
+                let range = if **messages_range == (0, 0) {
+                    let init = (messages_len.saturating_sub(batch_size), messages_len);
+                    info!("load initial");
+                    // load initial size
+                    Some(init)
+                } else if messages_len < max_window_size {
+                    info!("loading all {} {}", max_window_size, messages_len);
+                    // load all
+                    Some((0, max_window_size))
+                } else {
+                    info!("window ({}, {})", messages_range.0, messages_range.1);
+
+                    // We have only a subview, not showing everything
+
+                    let el = self.messages_div();
+
+                    // distance to currently loaded top end
+                    let from_top = el.scroll_top();
+                    // distance to currently loaded bottom end
+                    let from_bottom = el.scroll_height() - el.scroll_top();
+                    self.scroll = (el.scroll_top(), el.scroll_height() - el.client_height());
+
+                    // element.scrollHeight - element.scrollTop === element.clientHeight
+                    let is_end = el.scroll_height() - el.scroll_top() == el.client_height();
+
+                    if from_top < max_top_pixels {
+                        // need to move to window upwards
+                        info!("Load more (top) {}", from_top);
+
+                        let current_window_size = messages_range.1 - messages_range.0;
+
+                        let start_index = messages_range.0.saturating_sub(batch_size);
+
+                        let stop_index = if current_window_size > max_window_size {
+                            // remove one batch from the bottom
+                            messages_range
+                                .1
+                                .saturating_sub(batch_size)
+                                .min(start_index + batch_size)
+                        } else {
+                            messages_range.1
+                        };
+
+                        Some((start_index, stop_index))
+                    } else if is_end {
+                        info!("Load more (bottom) {} ({:?})", from_bottom, *messages_range);
+
+                        // let stop_index = if messages_len.saturating_sub(messages_range.1) < 20 {
+                        //     messages_len
+                        // } else {
+                        //     messages_range.1 + 20
+                        // };
+                        // let len = (stop_index.saturating_sub(messages_range.0)).max(50);
+                        // let start_index = stop_index.saturating_sub(len);
+
+                        // self.send_app_message(Msg::WsRequest(Request::LoadMessageList {
+                        //     start_index,
+                        //     stop_index,
+                        // }));
+                        None
                     } else {
-                        messages_range.0.saturating_sub(20)
-                    };
-                    let len = (messages_range.1.saturating_sub(start_index)).max(50);
-                    let stop_index = (start_index + len).min(messages_len);
+                        None
+                    }
+                };
 
-                    self.props.fetch_callback.emit((start_index, stop_index));
-                } else if is_end {
-                    info!(
-                        "Load more (bottom) {} ({:?}, {})",
-                        from_bottom, messages_range, messages_len
-                    );
-
-                    // let stop_index = if messages_len.saturating_sub(messages_range.1) < 20 {
-                    //     messages_len
-                    // } else {
-                    //     messages_range.1 + 20
-                    // };
-                    // let len = (stop_index.saturating_sub(messages_range.0)).max(50);
-                    // let start_index = stop_index.saturating_sub(len);
-
-                    // self.send_app_message(Msg::WsRequest(Request::LoadMessageList {
-                    //     start_index,
-                    //     stop_index,
-                    // }));
+                if let Some(range) = range {
+                    if range.0 != messages_range.0 || range.1 != messages_range.1 {
+                        self.props.fetch_callback.emit(range);
+                    }
                 }
 
                 false
@@ -124,7 +163,6 @@ impl Component for Messages {
         if new_props {
             self.scroll_bottom_next = chat_id_changed;
         }
-
         new_props
     }
 

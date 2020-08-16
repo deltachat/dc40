@@ -907,6 +907,7 @@ name = "dc-next-client"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "linkify",
  "log",
  "serde",
  "shared",
@@ -1948,6 +1949,15 @@ name = "linked-hash-map"
 version = "0.5.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8dd5a6d5999d9907cda8ed67bbd137d3af8085216c2ac62de5be860bd41f304a"
+
+[[package]]
+name = "linkify"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "03951527dd24d2c59f407502e7d88e0948ef06fac23335b556a4c2bc03c22096"
+dependencies = [
+ "memchr",
+]
 
 [[package]]
 name = "lock_api"

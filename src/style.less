@@ -134,6 +134,30 @@ body {
     overflow-y: auto;
     min-height: 0px;
 
+    .day-marker {
+      flex: 1;
+      height: 10px;
+      color: @darkerBlue;
+      text-align: center;
+      align-items: center;
+      display: flex;
+      margin: 10px 0 15px;
+
+      &::before, &::after {
+        content: '';
+        flex: 1;
+        border-bottom: 1px solid @gray;
+      }
+
+      &::before {
+        margin-right: 10px;
+      }
+      
+      &::after {
+        margin-left: 10px;
+      }
+    }
+
     .message {
       flex: 1;
       display: flex;
@@ -142,30 +166,6 @@ body {
 
       &.first {
         padding-top: 5px;
-      }
-
-      .message-new-day {
-        flex: 1;
-        height: 10px;
-        color: @darkerBlue;
-        text-align: center;
-        align-items: center;
-        display: flex;
-        margin: 10px 0 15px;
-
-        &::before, &::after {
-          content: '';
-          flex: 1;
-          border-bottom: 1px solid @gray;
-        }
-
-        &::before {
-          margin-right: 10px;
-        }
-        
-        &::after {
-          margin-left: 10px;
-        }
       }
 
       .message-menu {
@@ -245,6 +245,8 @@ body {
             display: block;
             flex: 1;
             color: #0c1d3b;
+            overflow-wrap: anywhere;
+            white-space: pre-wrap;
 
             a {
               display: inline;

@@ -96,7 +96,18 @@ impl LocalState {
         T::Error: std::fmt::Debug + std::error::Error + Send + Sync,
     {
         let response = self.to_response().await;
+        self.send(writer, response).await?;
+        Ok(())
+    }
 
+    pub async fn send<T: futures::sink::Sink<Message> + Unpin + Sync + Send + 'static>(
+        &self,
+        writer: Arc<RwLock<T>>,
+        response: Response,
+    ) -> Result<()>
+    where
+        T::Error: std::fmt::Debug + std::error::Error + Send + Sync,
+    {
         writer
             .write()
             .await
@@ -119,41 +130,31 @@ impl LocalState {
         }
 
         let errors = self.errors.iter().map(|e| e.to_string()).collect();
-        let (
-            chats,
-            selected_chat_length,
-            selected_chat_id,
-            selected_chat,
-            selected_messages_length,
-            selected_messages_range,
-            messages,
-        ) = if let Some(ref account_name) = self.selected_account {
-            let account = self
-                .accounts
-                .get(account_name)
-                .expect("invalid account state");
+        let (chats, selected_chat_length, selected_chat_id, selected_chat) =
+            if let Some(ref account_name) = self.selected_account {
+                let account = self
+                    .accounts
+                    .get(account_name)
+                    .expect("invalid account state");
 
-            let state = account.state.read().await;
+                let state = account.state.read().await;
 
-            let mut chat_states: Vec<_> = state
-                .chat_states
-                .iter()
-                .map(|(_id, state)| state.clone())
-                .collect();
-            chat_states.sort_unstable_by_key(|state| state.index);
+                let mut chat_states: Vec<_> = state
+                    .chat_states
+                    .iter()
+                    .map(|(_id, state)| state.clone())
+                    .collect();
+                chat_states.sort_unstable_by_key(|state| state.index);
 
-            (
-                chat_states,
-                state.chatlist.len(),
-                state.selected_chat_id.clone(),
-                state.selected_chat.clone(),
-                state.chat_msg_ids.len(),
-                state.chat_msgs_range,
-                state.chat_msgs.clone(),
-            )
-        } else {
-            (Default::default(), 0, None, None, 0, (0, 0), Vec::new())
-        };
+                (
+                    chat_states,
+                    state.chatlist.len(),
+                    state.selected_chat_id.clone(),
+                    state.selected_chat.clone(),
+                )
+            } else {
+                (Default::default(), 0, None, None)
+            };
 
         Response::RemoteUpdate {
             state: State {
@@ -165,9 +166,6 @@ impl LocalState {
                     selected_chat,
                     selected_chat_length,
                     chats,
-                    messages,
-                    selected_messages_length,
-                    selected_messages_range,
                 },
             },
         }

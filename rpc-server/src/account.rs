@@ -20,7 +20,7 @@ use lazy_static::lazy_static;
 use log::{debug, error, info, warn};
 use num_traits::{FromPrimitive, ToPrimitive};
 use serde::Serialize;
-use shared::{ChatMessage, ChatState, Login, Viewtype};
+use shared::{ChatItem, ChatMessage, ChatState, Login, Viewtype};
 
 use crate::state::*;
 
@@ -51,13 +51,6 @@ pub struct AccountState {
     pub selected_chat: Option<ChatState>,
     pub selected_chat_id: Option<ChatId>,
     pub chatlist: Chatlist,
-    /// All message ids of the selected chat.
-    pub chat_msg_ids: Vec<MsgId>,
-    /// State of currently selected chat messages
-    pub chat_msgs: Vec<ChatMessage>,
-    pub chat_msgs_range: (usize, usize),
-    /// indexed by index in the Chatlist
-    pub chats: HashMap<ChatId, Chat>,
 }
 
 impl Account {
@@ -96,13 +89,9 @@ impl Account {
             state: Arc::new(RwLock::new(AccountState {
                 logged_in: Login::default(),
                 email: email.to_string(),
-                chats: Default::default(),
                 selected_chat: None,
                 selected_chat_id: None,
                 chatlist,
-                chat_msg_ids: Default::default(),
-                chat_msgs: Default::default(),
-                chat_msgs_range: (0, 0),
                 chat_states: Default::default(),
             })),
             events: receiver,
@@ -212,16 +201,6 @@ impl Account {
 
         let mut ls = self.state.write().await;
         ls.selected_chat_id = Some(chat_id);
-        ls.chat_msg_ids = chat::get_chat_msgs(&self.context, chat_id, 0, None)
-            .await
-            .into_iter()
-            .filter_map(|c| match c {
-                deltachat::chat::ChatItem::Message { msg_id } => Some(msg_id),
-                _ => None,
-            })
-            .collect();
-        ls.chat_msgs = Default::default();
-        ls.chat_msgs_range = (0, 0);
 
         // mark as noticed
         chat::marknoticed_chat(&self.context, chat_id)
@@ -232,27 +211,21 @@ impl Account {
             ls.selected_chat = Some(chat_state);
         }
 
-        ls.chats.insert(chat.id, chat);
-
         Ok(())
     }
 
-    pub async fn load_message_list(&self, range: Option<(usize, usize)>) -> Result<()> {
-        let len = self.state.read().await.chat_msg_ids.len();
-        let range = range.unwrap_or_else(|| (len.saturating_sub(20), len));
+    pub async fn load_message_list(
+        &self,
+        range: Option<(usize, usize)>,
+    ) -> Result<(u32, (usize, usize), Vec<ChatItem>, Vec<ChatMessage>)> {
+        let chat_id = self.state.read().await.selected_chat_id.clone();
+        if let Some(chat_id) = chat_id {
+            info!("loading {:?} msgs", chat_id);
 
-        {
-            self.state.write().await.chat_msgs_range = range;
+            refresh_message_list(self.context.clone(), self.state.clone(), chat_id, range).await
+        } else {
+            bail!("failed to load message list, no chat selected");
         }
-
-        refresh_message_list(self.context.clone(), self.state.clone(), None).await?;
-
-        // markseen messages that we load
-        // could be better, by checking actual in view, but close enough for now
-        let msgs_list = self.state.read().await.chat_msg_ids.clone();
-        message::markseen_msgs(&self.context, msgs_list).await;
-
-        Ok(())
     }
 
     pub async fn send_text_message(&self, text: String) -> Result<()> {
@@ -351,22 +324,23 @@ impl Account {
                     | EventType::MsgRead { chat_id, .. }
                     | EventType::MsgFailed { chat_id, .. }
                     | EventType::ChatModified(chat_id) => {
-                        let res =
-                            refresh_message_list(context.clone(), state.clone(), Some(chat_id))
-                                .try_join(refresh_chat_list(context.clone(), state.clone()))
-                                .try_join(refresh_chat_state(
-                                    context.clone(),
-                                    state.clone(),
-                                    chat_id,
-                                ))
-                                .await;
+                        // let res =
+                        //     refresh_message_list(context.clone(), state.clone(), chat_id))
+                        //         .try_join(refresh_chat_list(context.clone(), state.clone()))
+                        //         .try_join(refresh_chat_state(
+                        //             context.clone(),
+                        //             state.clone(),
+                        //             chat_id,
+                        //         ))
+                        //         .await;
 
-                        if let Err(err) = res {
-                            Err(err)
-                        } else {
-                            let local_state = local_state.read().await;
-                            local_state.send_update(writer.clone()).await
-                        }
+                        // if let Err(err) = res {
+                        //     Err(err)
+                        // } else {
+                        //     let local_state = local_state.read().await;
+                        //     local_state.send_update(writer.clone()).await
+                        // }
+                        Ok(())
                     }
                     EventType::Info(msg) => {
                         info!("{}", msg);
@@ -430,7 +404,6 @@ pub async fn refresh_chat_state(
             state.chat_states.insert(chat_id, chat_state);
         }
     }
-    state.chats.insert(chat.id, chat);
 
     Ok(())
 }
@@ -490,65 +463,89 @@ pub async fn refresh_chat_list(context: Context, state: Arc<RwLock<AccountState>
 pub async fn refresh_message_list(
     context: Context,
     state: Arc<RwLock<AccountState>>,
-    chat_id: Option<ChatId>,
-) -> Result<()> {
-    let mut ls = state.write().await;
-    let current_chat_id = ls.selected_chat_id.clone();
-    if chat_id.is_some() && current_chat_id != chat_id {
-        return Ok(());
-    }
-    if current_chat_id.is_none() {
-        // Ignore if no chat is selected
-        return Ok(());
-    }
+    chat_id: ChatId,
+    range: Option<(usize, usize)>,
+) -> Result<(u32, (usize, usize), Vec<ChatItem>, Vec<ChatMessage>)> {
+    let ls = state.read().await;
 
-    let range = ls.chat_msgs_range;
+    let chat_items: Vec<_> = chat::get_chat_msgs(
+        &context,
+        chat_id,
+        deltachat::constants::DC_GCM_ADDDAYMARKER,
+        None,
+    )
+    .await
+    .into_iter()
+    .filter_map(|item| match item {
+        chat::ChatItem::Message { msg_id } => Some(ChatItem::Message(msg_id.to_u32())),
+        chat::ChatItem::DayMarker { timestamp } => Some(ChatItem::DayMarker(
+            time::OffsetDateTime::from_unix_timestamp(timestamp * 86_400),
+        )),
+        _ => None,
+    })
+    .collect();
+
+    let total_len = chat_items.len();
+
+    // default to the last n items
+    let range = range.unwrap_or_else(|| (total_len.saturating_sub(40), total_len));
+
     info!(
         "loading chat messages {:?} from ({}..={})",
         chat_id, range.0, range.1
     );
 
-    ls.chat_msg_ids = chat::get_chat_msgs(&context, current_chat_id.unwrap(), 0, None)
-        .await
-        .into_iter()
-        .filter_map(|c| match c {
-            deltachat::chat::ChatItem::Message { msg_id } => Some(msg_id),
-            _ => None,
-        })
-        .collect();
-
     let len = range.1.saturating_sub(range.0);
     let offset = range.0;
-    let mut msgs = Vec::with_capacity(len);
-    for msg_id in ls.chat_msg_ids.iter().skip(offset).take(len) {
-        let msg = message::Message::load_from_db(&context, *msg_id)
-            .await
-            .map_err(|err| anyhow!("failed to load msg: {}: {}", msg_id, err))?;
 
-        let from = Contact::load_from_db(&context, msg.get_from_id())
-            .await
-            .map_err(|err| anyhow!("failed to load contact: {}: {}", msg.get_from_id(), err))?;
+    dbg!(chat_items.len(), offset, len);
 
-        let chat_msg = ChatMessage {
-            id: msg.get_id().to_u32(),
-            from_id: msg.get_from_id(),
-            viewtype: Viewtype::from_i32(msg.get_viewtype().to_i32().unwrap()).unwrap(),
-            from_first_name: from.get_first_name().to_string(),
-            from_profile_image: from.get_profile_image(&context).await.map(Into::into),
-            from_color: from.get_color(),
-            starred: msg.is_starred(),
-            state: msg.get_state().to_string(),
-            text: msg.get_text(),
-            timestamp: time::OffsetDateTime::from_unix_timestamp(msg.get_sort_timestamp()),
-            is_info: msg.is_info(),
-            file: msg.get_file(&context).map(Into::into),
-            file_width: msg.get_width(),
-            file_height: msg.get_height(),
-        };
-        msgs.push(chat_msg);
+    let mut chat_messages = Vec::with_capacity(len);
+    let mut contacts = HashMap::new();
+
+    for chat_item in chat_items.iter().skip(offset).take(len) {
+        match chat_item {
+            ChatItem::Message(msg_id) => {
+                let msg = message::Message::load_from_db(&context, MsgId::new(*msg_id))
+                    .await
+                    .map_err(|err| anyhow!("failed to load msg: {}: {}", msg_id, err))?;
+
+                let from = match contacts.get(&msg.get_from_id()) {
+                    Some(contact) => contact,
+                    None => {
+                        let contact = Contact::load_from_db(&context, msg.get_from_id())
+                            .await
+                            .map_err(|err| {
+                                anyhow!("failed to load contact: {}: {}", msg.get_from_id(), err)
+                            })?;
+                        contacts.insert(msg.get_from_id(), contact);
+                        contacts.get(&msg.get_from_id()).unwrap()
+                    }
+                };
+
+                chat_messages.push(ChatMessage::Message {
+                    id: msg.get_id().to_u32(),
+                    from_id: msg.get_from_id(),
+                    viewtype: Viewtype::from_i32(msg.get_viewtype().to_i32().unwrap()).unwrap(),
+                    from_first_name: from.get_first_name().to_string(),
+                    from_profile_image: from.get_profile_image(&context).await.map(Into::into),
+                    from_color: from.get_color(),
+                    starred: msg.is_starred(),
+                    state: msg.get_state().to_string(),
+                    text: msg.get_text(),
+                    timestamp: time::OffsetDateTime::from_unix_timestamp(msg.get_sort_timestamp()),
+                    is_info: msg.is_info(),
+                    file: msg.get_file(&context).map(Into::into),
+                    file_width: msg.get_width(),
+                    file_height: msg.get_height(),
+                });
+            }
+            ChatItem::DayMarker(t) => {
+                chat_messages.push(ChatMessage::DayMarker(*t));
+            }
+            _ => {}
+        }
     }
 
-    ls.chat_msgs = msgs;
-
-    Ok(())
+    Ok((chat_id.to_u32(), range, chat_items, chat_messages))
 }

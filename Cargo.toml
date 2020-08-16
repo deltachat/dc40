@@ -20,6 +20,7 @@ anyhow = "1.0.32"
 shared = { path = "./shared" }
 yewtil = "0.3.0"
 time = { version = "0.2", default-features = false, features = ["serde"] }
+linkify = "0.4"
 
 [dependencies.web-sys]
 version = "0.3.4"

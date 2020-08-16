@@ -79,11 +79,25 @@ function createWindow() {
     }
   );
 
+  function openExternal(url) {
+    if (url.startsWith("http") || url.startsWith("mailto")) {
+      console.log("opening", url);
+      shell.openExternal(url);
+    }
+  }
+  
   mainWindow.webContents.on("new-window", (event, url) => {
     event.preventDefault();
-    console.log("opening", url);
-    shell.openExternal(url);
+    openExternal(url)
   });
+  
+  mainWindow.webContents.on("will-navigate", (event, url) => {
+    event.preventDefault();
+    if (url !== mainWindow.webContents.getURL()) {
+      openExternal(url)
+    }
+  });
+
 
   ipc.on("toMain", function(arg, event) {
     switch (event) {

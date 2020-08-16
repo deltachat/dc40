@@ -21,12 +21,13 @@ fn main() {
     let addr = "127.0.0.1:8080";
 
     task::block_on(async move {
-        let local_state = Arc::new(RwLock::new(LocalState::new().await.unwrap()));
-
         // Create the event loop and TCP listener we'll accept connections on.
         let try_socket = TcpListener::bind(&addr).await;
         let listener = try_socket.expect("Failed to bind");
         info!("Listening on: {}", addr);
+
+        let local_state = Arc::new(RwLock::new(LocalState::new().await.unwrap()));
+        info!("Restored local state");
 
         while let Ok((stream, _)) = listener.accept().await {
             let local_state = local_state.clone();
@@ -72,6 +73,11 @@ async fn accept_connection(stream: TcpStream, local_state: Arc<RwLock<LocalState
 
     while let Some(msg) = read.next().await {
         let msg = msg?;
+        if msg.is_close() {
+            info!("closing connection");
+            return Ok(());
+        }
+
         if !msg.is_binary() {
             warn!("ignoring unknown message {:?}", &msg);
             continue;
@@ -151,11 +157,23 @@ async fn accept_connection(stream: TcpStream, local_state: Arc<RwLock<LocalState
                 Request::SelectChat { account, chat_id } => {
                     let ls = local_state.write().await;
                     if let Some(account) = ls.accounts.get(&account) {
-                        account.select_chat(ChatId::new(chat_id)).await?;
+                        let chat = ChatId::new(chat_id);
+                        account.select_chat(chat).await?;
                         ls.send_update(write.clone()).await?;
 
-                        account.load_message_list(None).await?;
-                        ls.send_update(write.clone()).await?;
+                        let (chat_id, range, items, messages) =
+                            account.load_message_list(None).await?;
+
+                        ls.send(
+                            write.clone(),
+                            Response::MessageList {
+                                chat_id,
+                                range,
+                                items,
+                                messages,
+                            },
+                        )
+                        .await?;
                     }
                 }
                 Request::LoadChatList {
@@ -182,10 +200,20 @@ async fn accept_connection(stream: TcpStream, local_state: Arc<RwLock<LocalState
                         .as_ref()
                         .and_then(|a| ls.accounts.get(a))
                     {
-                        account
+                        let (chat_id, range, items, messages) = account
                             .load_message_list(Some((start_index, stop_index)))
                             .await?;
-                        ls.send_update(write.clone()).await?;
+
+                        ls.send(
+                            write.clone(),
+                            Response::MessageList {
+                                chat_id,
+                                range,
+                                items,
+                                messages,
+                            },
+                        )
+                        .await?;
                     }
                 }
                 Request::SelectAccount { account } => {

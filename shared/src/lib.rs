@@ -1,12 +1,19 @@
 use num_derive::{FromPrimitive, ToPrimitive};
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::PathBuf;
 
-use serde::{Deserialize, Serialize};
-
 #[derive(Debug, Serialize, Deserialize)]
 pub enum Response {
-    RemoteUpdate { state: State },
+    RemoteUpdate {
+        state: State,
+    },
+    MessageList {
+        chat_id: u32,
+        range: (usize, usize),
+        items: Vec<ChatItem>,
+        messages: Vec<ChatMessage>,
+    },
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -14,7 +21,7 @@ pub struct State {
     pub shared: SharedState,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub struct SharedState {
     pub accounts: HashMap<String, SharedAccountState>,
     pub errors: Vec<String>,
@@ -23,30 +30,36 @@ pub struct SharedState {
     pub selected_chat: Option<ChatState>,
     pub selected_chat_length: usize,
     pub chats: Vec<ChatState>,
-    pub selected_messages_length: usize,
-    pub selected_messages_range: (usize, usize),
-    pub messages: Vec<ChatMessage>,
 }
 
 #[derive(Debug, Serialize, Clone, Deserialize, PartialEq)]
-pub struct ChatMessage {
-    pub id: u32,
-    pub from_id: u32,
-    pub from_first_name: String,
-    pub from_profile_image: Option<PathBuf>,
-    pub from_color: u32,
-    pub viewtype: Viewtype,
-    pub state: String,
-    pub text: Option<String>,
-    pub starred: bool,
-    pub timestamp: time::OffsetDateTime,
-    pub is_info: bool,
-    pub file: Option<PathBuf>,
-    pub file_height: i32,
-    pub file_width: i32,
+pub enum ChatItem {
+    Message(u32),
+    DayMarker(time::OffsetDateTime),
 }
 
-#[derive(Debug, Serialize, Clone, Deserialize)]
+#[derive(Debug, Serialize, Clone, Deserialize, PartialEq)]
+pub enum ChatMessage {
+    Message {
+        id: u32,
+        from_id: u32,
+        from_first_name: String,
+        from_profile_image: Option<PathBuf>,
+        from_color: u32,
+        viewtype: Viewtype,
+        state: String,
+        text: Option<String>,
+        starred: bool,
+        timestamp: time::OffsetDateTime,
+        is_info: bool,
+        file: Option<PathBuf>,
+        file_height: i32,
+        file_width: i32,
+    },
+    DayMarker(time::OffsetDateTime),
+}
+
+#[derive(Debug, Serialize, Clone, Deserialize, PartialEq, Eq)]
 pub struct ChatState {
     pub index: Option<usize>,
     pub id: u32,
@@ -78,7 +91,7 @@ impl Default for Login {
     }
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize, PartialEq, Clone, Eq)]
 pub struct SharedAccountState {
     pub logged_in: Login,
     pub email: String,
