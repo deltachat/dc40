@@ -66,12 +66,13 @@ impl Component for Message {
                 let file = match viewtype {
                     Viewtype::Image | Viewtype::Gif => {
                         if let Some(ref file) = file {
+                            let file_height = (*file_height).max(200);
                             html! {
                                 <div class="message-image">
                                     <img
                                     src={format!("dc://{}", file.display())}
                                 alt="image"
-                                    height={(*file_height).max(300)}
+                                    height={(file_height).min(400)}
                                 width="auto" />
                                     </div>
                             }
