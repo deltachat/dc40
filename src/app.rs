@@ -11,7 +11,9 @@ use yewtil::{
 
 use shared::*;
 
-use crate::components::{chatlist::Chatlist, messages::Messages, sidebar::Sidebar};
+use crate::components::{
+    chatlist::Chatlist, message_input::MessageInput, messages::Messages, sidebar::Sidebar,
+};
 
 #[derive(Debug)]
 pub enum WsAction {
@@ -38,7 +40,6 @@ pub struct App {
     link: ComponentLink<App>,
     model: Model,
     ws: Option<WebSocketTask>,
-    input_ref: NodeRef,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -56,29 +57,9 @@ struct Model {
 }
 
 impl App {
-    fn input(&self) -> Option<web_sys::HtmlInputElement> {
-        self.input_ref.cast::<web_sys::HtmlInputElement>()
-    }
-
     fn view_data(&self) -> Html {
         let link = self.link.clone();
-
-        let input = self.input();
-        let onchange = link.callback(move |change| {
-            info!("chat message: {:?}", change);
-            if let yew::ChangeData::Value(text) = change {
-                if !text.trim().is_empty() {
-                    if let Some(ref input) = input {
-                        input.set_value("");
-                    }
-                    Msg::WsRequest(Request::SendTextMessage { text })
-                } else {
-                    Msg::Ignore
-                }
-            } else {
-                Msg::Ignore
-            }
-        });
+        let onsend = link.callback(move |text| Msg::WsRequest(Request::SendTextMessage { text }));
 
         let fetch_callback = link.callback(move |(start_index, stop_index)| {
             Msg::WsRequest(Request::LoadMessageList {
@@ -122,9 +103,7 @@ impl App {
                    messages_range=self.model.messages_range.irc()
                    selected_chat_id=self.model.selected_chat_id.irc()
                    fetch_callback=fetch_callback />
-                  <div class="chat-input">
-                    <input type="text" placeholder="Send a message" onchange=onchange ref=self.input_ref.clone() />
-                  </div>
+                  <MessageInput send_callback=onsend />
                 </div>
            </>
         }
@@ -141,7 +120,6 @@ impl Component for App {
             link,
             model: Model::default(),
             ws: None,
-            input_ref: NodeRef::default(),
         }
     }
 
