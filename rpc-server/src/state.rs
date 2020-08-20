@@ -130,7 +130,7 @@ impl LocalState {
         }
 
         let errors = self.errors.iter().map(|e| e.to_string()).collect();
-        let (chats, selected_chat_length, selected_chat_id, selected_chat) =
+        let (selected_chat_length, selected_chat_id, selected_chat) =
             if let Some(ref account_name) = self.selected_account {
                 let account = self
                     .accounts
@@ -139,21 +139,13 @@ impl LocalState {
 
                 let state = account.state.read().await;
 
-                let mut chat_states: Vec<_> = state
-                    .chat_states
-                    .iter()
-                    .map(|(_id, state)| state.clone())
-                    .collect();
-                chat_states.sort_unstable_by_key(|state| state.index);
-
                 (
-                    chat_states,
                     state.chatlist.len(),
                     state.selected_chat_id.clone(),
                     state.selected_chat.clone(),
                 )
             } else {
-                (Default::default(), 0, None, None)
+                (0, None, None)
             };
 
         Response::RemoteUpdate {
@@ -165,7 +157,6 @@ impl LocalState {
                     selected_chat_id: selected_chat_id.map(|s| s.to_u32()),
                     selected_chat,
                     selected_chat_length,
-                    chats,
                 },
             },
         }

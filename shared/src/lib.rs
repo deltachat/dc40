@@ -14,6 +14,11 @@ pub enum Response {
         items: Vec<ChatItem>,
         messages: Vec<ChatMessage>,
     },
+    ChatList {
+        range: (usize, usize),
+        len: usize,
+        chats: Vec<ChatState>,
+    },
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -29,7 +34,6 @@ pub struct SharedState {
     pub selected_chat_id: Option<u32>,
     pub selected_chat: Option<ChatState>,
     pub selected_chat_length: usize,
-    pub chats: Vec<ChatState>,
 }
 
 #[derive(Debug, Serialize, Clone, Deserialize, PartialEq)]

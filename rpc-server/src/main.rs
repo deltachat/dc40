@@ -33,11 +33,13 @@ fn main() {
             let local_state = local_state.clone();
             task::spawn(async move {
                 if let Err(err) = accept_connection(stream, local_state).await {
-                    match err.downcast_ref::<Error>() {
-                        Some(Error::ConnectionClosed)
-                        | Some(Error::Protocol(_))
-                        | Some(Error::Utf8) => (),
-                        err => warn!("Error processing connection: {:?}", err),
+                    if let Some(err) = err.downcast_ref::<Error>() {
+                        match err {
+                            Error::ConnectionClosed | Error::Protocol(_) | Error::Utf8 => {}
+                            err => warn!("Error processing connection: {:?}", err),
+                        }
+                    } else {
+                        warn!("Error processing connection: {:?}", err);
                     }
                 }
             });
@@ -83,6 +85,7 @@ async fn accept_connection(stream: TcpStream, local_state: Arc<RwLock<LocalState
             continue;
         }
         let parsed: std::result::Result<Request, _> = bincode::deserialize(&msg.into_data());
+        info!("request: {:?}", &parsed);
         match parsed {
             Ok(request) => match request {
                 Request::Login {
@@ -113,12 +116,37 @@ async fn accept_connection(stream: TcpStream, local_state: Arc<RwLock<LocalState
                     }
 
                     {
-                        if let Some(account) = local_state.read().await.accounts.get(&email) {
-                            account.load_chat_list(0, 10).await?;
+                        let ls = local_state.write().await;
+
+                        // send base state
+                        ls.send_update(write.clone()).await?;
+
+                        if let Some(account) = ls.accounts.get(&email) {
+                            // chat list
+                            let (range, len, chats) = account.load_chat_list(0, 10).await?;
+                            ls.send(write.clone(), Response::ChatList { range, len, chats })
+                                .await?;
+
+                            // send selected chat if exists
+                            if let Some(_selected_chat) =
+                                account.state.read().await.selected_chat_id
+                            {
+                                let (chat_id, range, items, messages) =
+                                    account.load_message_list(None).await?;
+
+                                ls.send(
+                                    write.clone(),
+                                    Response::MessageList {
+                                        chat_id,
+                                        range,
+                                        items,
+                                        messages,
+                                    },
+                                )
+                                .await?;
+                            }
                         }
                     }
-                    let local_state = local_state.read().await;
-                    local_state.send_update(write.clone()).await?;
                 }
                 Request::Import { path, email } => {
                     ensure!(!email.is_empty(), "Missing email");
@@ -147,8 +175,11 @@ async fn accept_connection(stream: TcpStream, local_state: Arc<RwLock<LocalState
                     }
 
                     {
-                        if let Some(account) = local_state.read().await.accounts.get(&email) {
-                            account.load_chat_list(0, 10).await?;
+                        let ls = local_state.write().await;
+                        if let Some(account) = ls.accounts.get(&email) {
+                            let (range, len, chats) = account.load_chat_list(0, 10).await?;
+                            ls.send(write.clone(), Response::ChatList { range, len, chats })
+                                .await?;
                         }
                     }
                     let local_state = local_state.read().await;
@@ -186,8 +217,10 @@ async fn accept_connection(stream: TcpStream, local_state: Arc<RwLock<LocalState
                         .as_ref()
                         .and_then(|a| ls.accounts.get(a))
                     {
-                        account.load_chat_list(start_index, stop_index).await?;
-                        ls.send_update(write.clone()).await?;
+                        let (range, len, chats) =
+                            account.load_chat_list(start_index, stop_index).await?;
+                        ls.send(write.clone(), Response::ChatList { range, len, chats })
+                            .await?;
                     }
                 }
                 Request::LoadMessageList {
@@ -200,9 +233,13 @@ async fn accept_connection(stream: TcpStream, local_state: Arc<RwLock<LocalState
                         .as_ref()
                         .and_then(|a| ls.accounts.get(a))
                     {
-                        let (chat_id, range, items, messages) = account
-                            .load_message_list(Some((start_index, stop_index)))
-                            .await?;
+                        let range = if start_index == 0 && stop_index == 0 {
+                            None
+                        } else {
+                            Some((start_index, stop_index))
+                        };
+                        let (chat_id, range, items, messages) =
+                            account.load_message_list(range).await?;
 
                         ls.send(
                             write.clone(),

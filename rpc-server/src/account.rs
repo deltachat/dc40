@@ -173,30 +173,36 @@ impl Account {
         Ok(())
     }
 
-    pub async fn load_chat_list(&self, start_index: usize, stop_index: usize) -> Result<()> {
+    pub async fn load_chat_list(
+        &self,
+        start_index: usize,
+        stop_index: usize,
+    ) -> Result<((usize, usize), usize, Vec<ChatState>)> {
         ensure!(start_index <= stop_index, "invalid indicies");
-        self.state.write().await.chat_states.clear();
 
-        let ids = {
-            let chatlist = &self.state.read().await.chatlist;
-            (start_index..=stop_index)
-                .map(|i| chatlist.get_chat_id(i))
-                .collect::<Vec<_>>()
-        };
+        let chatlist = Chatlist::try_load(&self.context, 0, None, None)
+            .await
+            .map_err(|err| anyhow!("failed to load chats: {:?}", err))?;
 
-        let futures = ids
-            .into_iter()
-            .map(|chat_id| refresh_chat_state(self.context.clone(), self.state.clone(), chat_id))
-            .collect::<Vec<_>>();
+        let total_len = chatlist.len();
+        let len = stop_index.saturating_sub(start_index);
 
-        futures::future::try_join_all(futures).await?;
+        let mut chats = Vec::with_capacity(len);
+        for i in start_index..=stop_index {
+            let chat_id = chatlist.get_chat_id(i);
+            let (_, chat_state) =
+                load_chat_state(self.context.clone(), self.state.clone(), chat_id).await?;
+            if let Some(s) = chat_state {
+                chats.push(s);
+            }
+        }
 
-        Ok(())
+        Ok(((start_index, stop_index), total_len, chats))
     }
 
     pub async fn select_chat(&self, chat_id: ChatId) -> Result<()> {
         info!("selecting chat {:?}", chat_id);
-        let (chat, chat_state) =
+        let (_, chat_state) =
             load_chat_state(self.context.clone(), self.state.clone(), chat_id).await?;
 
         let mut ls = self.state.write().await;
@@ -222,7 +228,7 @@ impl Account {
         if let Some(chat_id) = chat_id {
             info!("loading {:?} msgs", chat_id);
 
-            refresh_message_list(self.context.clone(), self.state.clone(), chat_id, range).await
+            refresh_message_list(self.context.clone(), chat_id, range).await
         } else {
             bail!("failed to load message list, no chat selected");
         }
@@ -382,32 +388,6 @@ pub struct RemoteEvent {
     event: String,
 }
 
-pub async fn refresh_chat_state(
-    context: Context,
-    state: Arc<RwLock<AccountState>>,
-    chat_id: ChatId,
-) -> Result<()> {
-    info!("refreshing chat state: {:?}", &chat_id);
-
-    let (chat, chat_state) = load_chat_state(context, state.clone(), chat_id).await?;
-
-    let mut state = state.write().await;
-    if let Some(chat_state) = chat_state {
-        if let Some(sel_chat_id) = state.selected_chat_id {
-            if sel_chat_id == chat_id {
-                state.selected_chat = Some(chat_state.clone());
-            }
-        }
-
-        if chat_state.index.is_some() {
-            // Only insert if there is actually a valid index.
-            state.chat_states.insert(chat_id, chat_state);
-        }
-    }
-
-    Ok(())
-}
-
 async fn load_chat_state(
     context: Context,
     state: Arc<RwLock<AccountState>>,
@@ -450,24 +430,11 @@ async fn load_chat_state(
     Ok((chat, chat_state))
 }
 
-pub async fn refresh_chat_list(context: Context, state: Arc<RwLock<AccountState>>) -> Result<()> {
-    let chatlist = Chatlist::try_load(&context, 0, None, None)
-        .await
-        .map_err(|err| anyhow!("failed to load chats: {:?}", err))?;
-
-    state.write().await.chatlist = chatlist;
-
-    Ok(())
-}
-
-pub async fn refresh_message_list(
+async fn refresh_message_list(
     context: Context,
-    state: Arc<RwLock<AccountState>>,
     chat_id: ChatId,
     range: Option<(usize, usize)>,
 ) -> Result<(u32, (usize, usize), Vec<ChatItem>, Vec<ChatMessage>)> {
-    let ls = state.read().await;
-
     let chat_items: Vec<_> = chat::get_chat_msgs(
         &context,
         chat_id,
@@ -543,7 +510,6 @@ pub async fn refresh_message_list(
             ChatItem::DayMarker(t) => {
                 chat_messages.push(ChatMessage::DayMarker(*t));
             }
-            _ => {}
         }
     }
 

@@ -12,6 +12,8 @@ pub struct Props<T: Clone + PartialEq> {
     pub selected_id: Irc<Option<u32>>,
     pub fetch_callback: Callback<(usize, usize)>,
     pub render_element: Rc<dyn Fn(T) -> Html>,
+    pub auto_scroll: bool,
+    pub batch_size: usize,
 }
 
 impl<T: Clone + PartialEq> PartialEq for Props<T> {
@@ -22,6 +24,8 @@ impl<T: Clone + PartialEq> PartialEq for Props<T> {
             && self.list_len == other.list_len
             && self.selected_id == other.selected_id
             && self.fetch_callback == other.fetch_callback
+            && self.auto_scroll == other.auto_scroll
+            && self.batch_size == other.batch_size
             && Rc::ptr_eq(&self.render_element, &other.render_element)
     }
 }
@@ -78,7 +82,7 @@ impl<T: Clone + PartialEq + 'static> Component for List<T> {
     }
 
     fn update(&mut self, msg: Self::Message) -> ShouldRender {
-        let batch_size = 30;
+        let batch_size = self.props.batch_size;
         let max_window_size = 3 * batch_size;
 
         // At which pixel distance we start loading
@@ -93,23 +97,18 @@ impl<T: Clone + PartialEq + 'static> Component for List<T> {
                 } = &self.props;
                 let list_len = **list_len;
 
-                info!("-----");
                 if self.loading {
                     return false;
                 }
 
                 let range = if **list_range == (0, 0) {
                     let init = (list_len.saturating_sub(batch_size), list_len);
-                    info!("load initial");
                     // load initial size
                     Some(init)
                 } else if list_len < max_window_size {
-                    info!("loading all {} {}", max_window_size, list_len);
                     // load all
                     Some((0, max_window_size))
                 } else {
-                    info!("window ({}, {})", list_range.0, list_range.1);
-
                     // We have only a subview, not showing everything
 
                     let el = self.list_div();
@@ -121,19 +120,11 @@ impl<T: Clone + PartialEq + 'static> Component for List<T> {
                     self.scroll = (el.scroll_top(), el.scroll_height() - el.client_height());
 
                     // element.scrollHeight - element.scrollTop === element.clientHeight
-                    info!(
-                        "{}, {}, {}",
-                        el.scroll_height() - el.scroll_top(),
-                        el.client_height(),
-                        max_top_pixels
-                    );
                     let is_end =
                         el.scroll_height() - el.scroll_top() <= el.client_height() + max_top_pixels;
 
-                    if from_top < max_top_pixels {
+                    if from_top < max_top_pixels && list_range.0 > 0 {
                         // need to move to window upwards
-                        info!("Load more (top) {}", from_top);
-
                         let current_window_size = list_range.1 - list_range.0;
 
                         let start_index = list_range.0.saturating_sub(batch_size);
@@ -150,8 +141,6 @@ impl<T: Clone + PartialEq + 'static> Component for List<T> {
 
                         Some((start_index, stop_index))
                     } else if is_end {
-                        info!("Load more (bottom) {} ({:?})", from_bottom, *list_range);
-
                         let current_window_size = list_range.1 - list_range.0;
 
                         let stop_index = (list_range.1 + batch_size).min(list_len);
@@ -192,10 +181,12 @@ impl<T: Clone + PartialEq + 'static> Component for List<T> {
     }
 
     fn rendered(&mut self, first_render: bool) {
-        if self.scroll_bottom_next || first_render {
-            self.scroll_to_bottom();
-        } else {
-            self.scroll_to_last();
+        if self.props.auto_scroll {
+            if self.scroll_bottom_next || first_render {
+                self.scroll_to_bottom();
+            } else {
+                self.scroll_to_last();
+            }
         }
     }
 

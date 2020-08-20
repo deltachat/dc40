@@ -24,6 +24,7 @@ pub enum WsAction {
 
 #[derive(Debug)]
 pub enum Msg {
+    Connected,
     WsAction(WsAction),
     WsReady(Result<Response, Error>),
     Ignore,
@@ -51,6 +52,8 @@ struct Model {
     selected_chat: Mrc<Option<ChatState>>,
     selected_chat_length: Mrc<usize>,
     chats: Mrc<Vec<ChatState>>,
+    chats_range: Mrc<(usize, usize)>,
+    chats_len: Mrc<usize>,
     messages_range: Mrc<(usize, usize)>,
     message_items: Mrc<Vec<ChatItem>>,
     messages: Mrc<Vec<ChatMessage>>,
@@ -61,7 +64,13 @@ impl App {
         let link = self.link.clone();
         let onsend = link.callback(move |text| Msg::WsRequest(Request::SendTextMessage { text }));
 
-        let fetch_callback = link.callback(move |(start_index, stop_index)| {
+        let chats_fetch_callback = link.callback(move |(start_index, stop_index)| {
+            Msg::WsRequest(Request::LoadChatList {
+                start_index,
+                stop_index,
+            })
+        });
+        let messages_fetch_callback = link.callback(move |(start_index, stop_index)| {
             Msg::WsRequest(Request::LoadMessageList {
                 start_index,
                 stop_index,
@@ -79,12 +88,14 @@ impl App {
                 />
                 <Chatlist
                   selected_account=self.model.selected_account.irc()
-                  chats=self.model.chats.irc()
                   selected_chat_id=self.model.selected_chat_id.irc()
                   selected_chat=self.model.selected_chat.irc()
                   selected_chat_length =self.model.selected_chat_length.irc()
                   select_chat_callback=select_chat_callback
-                />
+                  chats=self.model.chats.irc()
+                  chats_range=self.model.chats_range.irc()
+                  chats_len=self.model.chats_len.irc()
+                  fetch_callback=chats_fetch_callback />
                 <div class="chat">
                   <div class="chat-header"> {
                     if let Some(chat) = &*self.model.selected_chat {
@@ -102,7 +113,7 @@ impl App {
                    messages_len=Irc::new(self.model.message_items.len())
                    messages_range=self.model.messages_range.irc()
                    selected_chat_id=self.model.selected_chat_id.irc()
-                   fetch_callback=fetch_callback />
+                   fetch_callback=messages_fetch_callback />
                   <MessageInput send_callback=onsend />
                 </div>
            </>
@@ -129,7 +140,7 @@ impl Component for App {
                 WsAction::Connect => {
                     let callback = self.link.callback(|Bincode(data)| Msg::WsReady(data));
                     let notification = self.link.callback(|status| match status {
-                        WebSocketStatus::Opened => Msg::Ignore,
+                        WebSocketStatus::Opened => Msg::Connected,
                         WebSocketStatus::Closed | WebSocketStatus::Error => WsAction::Lost.into(),
                     });
                     let task = WebSocketService::connect_binary(
@@ -147,6 +158,22 @@ impl Component for App {
                     self.ws = None;
                 }
             },
+            Msg::Connected => {
+                let mut messages = vec![Msg::WsRequest(Request::LoadChatList {
+                    start_index: 0,
+                    stop_index: 10,
+                })];
+
+                if self.model.selected_chat.is_some() {
+                    messages.push(Msg::WsRequest(Request::LoadMessageList {
+                        start_index: 0,
+                        stop_index: 0,
+                    }));
+                }
+
+                self.link.send_message_batch(messages);
+                return false;
+            }
             Msg::WsReady(response) => match response {
                 Ok(data) => match data {
                     Response::MessageList {
@@ -161,10 +188,16 @@ impl Component for App {
 
                         return true;
                     }
+                    Response::ChatList { range, len, chats } => {
+                        self.model.chats_range.neq_assign(range);
+                        self.model.chats_len.neq_assign(len);
+                        self.model.chats.neq_assign(chats);
+
+                        return true;
+                    }
                     Response::RemoteUpdate { state } => {
                         self.model.accounts.neq_assign(state.shared.accounts);
                         self.model.errors.neq_assign(state.shared.errors);
-                        self.model.chats.neq_assign(state.shared.chats);
                         self.model
                             .selected_account
                             .neq_assign(state.shared.selected_account);

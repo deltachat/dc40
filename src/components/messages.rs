@@ -1,6 +1,6 @@
 use shared::*;
 use std::rc::Rc;
-use yew::{html, Callback, Component, ComponentLink, Html, NodeRef, Properties, ShouldRender};
+use yew::{html, Callback, Component, ComponentLink, Html, Properties, ShouldRender};
 use yewtil::{ptr::Irc, NeqAssign};
 
 use crate::components::list::List;
@@ -51,7 +51,8 @@ impl Component for Messages {
                selected_id=self.props.selected_chat_id.clone()
                fetch_callback=self.props.fetch_callback.clone()
                render_element=render_element
-             />
+               auto_scroll=true
+               batch_size=30 />
         }
     }
 }
