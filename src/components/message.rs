@@ -44,23 +44,28 @@ impl Component for Message {
                 is_info,
                 id,
                 timestamp,
+                is_first,
                 ..
             } => {
-                let image_style = format!("background-color: #{}", from_color);
-                let image = if let Some(ref profile_image) = from_profile_image {
-                    html! {
-                        <img
-                         class="image-icon"
-                         src={format!("dc://{}", profile_image.to_string_lossy())}
-                         alt="chat avatar"
-                         />
+                let image = if *is_first {
+                    if let Some(ref profile_image) = from_profile_image {
+                        html! {
+                            <img
+                             class="image-icon"
+                             src={format!("dc://{}", profile_image.to_string_lossy())}
+                             alt="chat avatar"
+                             />
+                        }
+                    } else {
+                        let image_style = format!("background-color: #{:06X}", from_color);
+                        html! {
+                            <div class="letter-icon" style={image_style}>
+                            {from_first_name.chars().next().unwrap()}
+                            </div>
+                        }
                     }
                 } else {
-                    html! {
-                        <div class="letter-icon" style={image_style}>
-                        {from_first_name.chars().next().unwrap()}
-                        </div>
-                    }
+                    html! {}
                 };
 
                 let file = match viewtype {
@@ -88,23 +93,28 @@ impl Component for Message {
                     html! {
                         <div class="message-info">{text}</div>
                     }
-                } else {
+                } else if *is_first {
                     html! {
                         <div class="message-text">
                             <div class="message-icon">{image}</div>
                             <div class="message-body">
-                            <div class="message-header">
-                            <div class="message-sender">{&from_first_name}</div>
-                            <div class="message-timestamp">
-                        {timestamp.format("%R")}
+                                <div class="message-header">
+                                    <div class="message-sender">{&from_first_name}</div>
+                                    <div class="message-timestamp">{timestamp.format("%R")}</div>
+                                </div>
+                                { file }
+                                <div class="message-inner-text">{text}</div>
+                            </div>
                         </div>
+                    }
+                } else {
+                    html! {
+                        <div class="message-text">
+                            <div class="message-body message-body-followup">
+                                { file }
+                                <div class="message-inner-text">{text}</div>
                             </div>
-                        { file }
-                        <div class="message-inner-text">
-                        {text}
                         </div>
-                            </div>
-                            </div>
                     }
                 };
 

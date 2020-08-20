@@ -465,11 +465,10 @@ async fn refresh_message_list(
     let len = range.1.saturating_sub(range.0);
     let offset = range.0;
 
-    dbg!(chat_items.len(), offset, len);
-
     let mut chat_messages = Vec::with_capacity(len);
     let mut contacts = HashMap::new();
 
+    let mut last_contact_id = None;
     for chat_item in chat_items.iter().skip(offset).take(len) {
         match chat_item {
             ChatItem::Message(msg_id) => {
@@ -490,6 +489,13 @@ async fn refresh_message_list(
                     }
                 };
 
+                let is_first = if let Some(id) = last_contact_id {
+                    id != msg.get_from_id()
+                } else {
+                    true
+                };
+                last_contact_id = Some(msg.get_from_id());
+
                 chat_messages.push(ChatMessage::Message {
                     id: msg.get_id().to_u32(),
                     from_id: msg.get_from_id(),
@@ -505,6 +511,7 @@ async fn refresh_message_list(
                     file: msg.get_file(&context).map(Into::into),
                     file_width: msg.get_width(),
                     file_height: msg.get_height(),
+                    is_first,
                 });
             }
             ChatItem::DayMarker(t) => {

@@ -70,7 +70,7 @@ body {
     height: 32px;
     width: 32px;
     border: 3px solid transparent;
-    border-radius: 10px;
+    border-radius: 50%;
     color: #ffffff;
     overflow: hidden;
     border: 1px solid rgba(255, 255, 255, 0.4);
@@ -178,7 +178,7 @@ body {
       
       .message-icon {
         flex: 0 0 30px;
-        border-radius: 7px;
+        border-radius: 50%;
         overflow: hidden;
         margin-right: 10px;
         max-height: 30px;
@@ -217,6 +217,9 @@ body {
           flex-direction: column;
           max-height: 100%;
 
+          &.message-body-followup {
+            margin-left: 40px;
+          }
           
           .message-header {
             flex: 0 0 20px;
@@ -334,7 +337,7 @@ body {
 
     .chat-icon {
       flex: 0 0 32px;
-      border-radius: 10px;
+      border-radius: 50%;
       height: 32px;
       width: 32px;
       overflow: hidden;

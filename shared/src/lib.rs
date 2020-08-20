@@ -59,6 +59,7 @@ pub enum ChatMessage {
         file: Option<PathBuf>,
         file_height: i32,
         file_width: i32,
+        is_first: bool,
     },
     DayMarker(time::OffsetDateTime),
 }
