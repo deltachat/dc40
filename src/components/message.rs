@@ -109,8 +109,11 @@ impl Component for Message {
                     }
                 } else {
                     html! {
-                        <div class="message-text">
-                            <div class="message-body message-body-followup">
+                        <div class="message-text followup">
+                            <div class="message-timestamp">
+                                {timestamp.format("%R")}
+                            </div>
+                            <div class="message-body">
                                 { file }
                                 <div class="message-inner-text">{text}</div>
                             </div>

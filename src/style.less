@@ -11,11 +11,9 @@ body {
   outline: none;
 }
 
-@lightBlueGray: #8199bd;
-@darkBlue: #0a1d3b;
-@darkerBlue: #011434;
-@gray: #afb6c0;
-@hoverBlue: #05419d;
+
+@import "./styles/messages";
+@import "./styles/variables";
 
 // Layout
 
@@ -126,154 +124,6 @@ body {
       font-size: 14px;
       line-height: 14px;
       font-weight: 300;
-    }
-  }
-
-  .message-list {
-    flex: 1 1 auto;
-    overflow-y: auto;
-    min-height: 0px;
-
-    .day-marker {
-      flex: 1;
-      height: 10px;
-      color: @darkerBlue;
-      text-align: center;
-      align-items: center;
-      display: flex;
-      margin: 20px 0;
-
-      &::before, &::after {
-        content: '';
-        flex: 1;
-        opacity: 0.6;
-        border-bottom: 1px solid @gray;
-      }
-
-      &::before {
-        margin-right: 15px;
-      }
-      
-      &::after {
-        margin-left: 15px;
-      }
-    }
-
-    .message {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      padding: 0px 20px;
-      margin: 5px 0;
-
-      .message-menu {
-        display: none;
-        position: absolute;
-        right: 20px;
-      }
-      
-      .message-content {
-        display: flex;
-        flex-direction: row;
-      }
-      
-      .message-icon {
-        flex: 0 0 30px;
-        border-radius: 50%;
-        overflow: hidden;
-        margin-right: 10px;
-        max-height: 30px;
-        display: flex;
-        align-items: stretch;
-
-        .letter-icon {
-          flex: 1;
-          font-size: 20px;
-          padding: 0;
-        }
-
-        img {
-          object-fit: contain;
-          height: 30px;
-        }
-      }
-      
-      .message-info {
-        flex: 1;
-        color: #748090;
-        text-align: center;
-        min-height: 25px;
-        padding: 5px;
-        font-size: 12px;
-      }
-
-      .message-text {
-        flex: 1;
-        display: flex;
-        max-height: 100%;
-
-        .message-body {
-          flex: 1;
-          display: flex;
-          flex-direction: column;
-          max-height: 100%;
-
-          &.message-body-followup {
-            margin-left: 40px;
-          }
-          
-          .message-header {
-            flex: 0 0 20px;
-            display: flex;
-
-            .message-sender {
-              font-weight: 700;
-              height: 20px;
-              flow: 1;
-            }
-
-            .message-timestamp {
-              flow: 0 0 60px;
-              margin-left: 10px;
-              font-weight: 300;
-              font-size: 14px;
-              padding: 3px 0 0 0;
-              color: #afb6c0;
-            }
-          }
-
-          .message-inner-text {
-            display: block;
-            flex: 1;
-            color: #0c1d3b;
-            overflow-wrap: anywhere;
-            white-space: pre-wrap;
-
-            a {
-              display: inline;
-              text-decoration: none;
-              color: #0065ff;
-
-              &:hover {
-                text-decoration: underline;
-              }
-            }
-          }
-
-          .message-image {
-            flex: 1 1 auto;
-            max-height: 100%;
-            margin: 5px 0;
-
-            img {
-              object-fit: contain;
-              border: 1px solid #afb6c0;
-              border-radius: 10px;
-              max-width: 100%;
-            }
-          }
-        }
-      }
     }
   }
 }

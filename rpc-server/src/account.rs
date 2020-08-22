@@ -510,6 +510,7 @@ async fn refresh_message_list(
     let mut contacts = HashMap::new();
 
     let mut last_contact_id = None;
+    let mut last_marker = true;
     for chat_item in chat_items.iter().skip(offset).take(len) {
         match chat_item {
             ChatItem::Message(msg_id) => {
@@ -530,12 +531,17 @@ async fn refresh_message_list(
                     }
                 };
 
-                let is_first = if let Some(id) = last_contact_id {
-                    id != msg.get_from_id()
-                } else {
+                let is_first = if last_marker {
                     true
+                } else {
+                    if let Some(id) = last_contact_id {
+                        id != msg.get_from_id()
+                    } else {
+                        true
+                    }
                 };
                 last_contact_id = Some(msg.get_from_id());
+                last_marker = false;
 
                 chat_messages.push(ChatMessage::Message {
                     id: msg.get_id().to_u32(),
@@ -557,6 +563,7 @@ async fn refresh_message_list(
             }
             ChatItem::DayMarker(t) => {
                 chat_messages.push(ChatMessage::DayMarker(*t));
+                last_marker = true;
             }
         }
     }
