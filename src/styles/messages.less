@@ -170,3 +170,47 @@
     }
   }
 }
+
+
+   
+.chat-input {
+  flex: 0 0 40px;
+  border: 1px solid #afb6c0;
+  minHeight: 30px;
+  margin: 10px;
+  padding: 5px 5px 5px 15px;
+  border-radius: 5px;
+  display: flex;
+
+  input {
+    flex: 1;
+    outline: none;
+    border: none;
+  }
+
+  .send-button {
+    border-radius: 5px;
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    flex-direction: row;
+    justify-content: center;
+
+    .icon {
+      background-color: @gray;
+    }
+
+    &.active {
+      background-color: @darkBlue;
+
+      &:hover {
+        cursor: pointer;
+      }
+      
+      .icon {
+        background-color: #FFFFFF;
+      }
+    }
+  }
+}

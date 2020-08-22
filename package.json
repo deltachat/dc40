@@ -64,6 +64,7 @@
     "less-loader": "^6.2.0",
     "mini-css-extract-plugin": "^0.10.0",
     "style-loader": "^1.2.1",
+    "svg-url-loader": "^6.0.0",
     "wait-on": "^5.0.0",
     "webpack": "^4.44.1",
     "webpack-cli": "^3.3.12",
