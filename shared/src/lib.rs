@@ -19,6 +19,34 @@ pub enum Response {
         len: usize,
         chats: Vec<ChatState>,
     },
+    Event {
+        account: u32,
+        event: Event,
+    },
+}
+
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
+pub enum Event {
+    Configure(Progress),
+    Imex(Progress),
+    Connected,
+    MessagesChanged { chat_id: u32 },
+    MessageIncoming { chat_id: u32 },
+    Log(Log),
+}
+
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
+pub enum Progress {
+    Success,
+    Error,
+    Step(usize),
+}
+
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
+pub enum Log {
+    Info(String),
+    Warning(String),
+    Error(String),
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -32,8 +60,6 @@ pub struct SharedState {
     pub errors: Vec<String>,
     pub selected_account: Option<String>,
     pub selected_chat_id: Option<u32>,
-    pub selected_chat: Option<ChatState>,
-    pub selected_chat_length: usize,
 }
 
 #[derive(Debug, Serialize, Clone, Deserialize, PartialEq)]

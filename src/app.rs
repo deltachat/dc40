@@ -3,7 +3,7 @@ use log::*;
 use std::collections::HashMap;
 use yew::format::Bincode;
 use yew::services::websocket::{WebSocketService, WebSocketStatus, WebSocketTask};
-use yew::{html, Component, ComponentLink, Html, NodeRef, ShouldRender};
+use yew::{html, Component, ComponentLink, Html, ShouldRender};
 use yewtil::{
     ptr::{Irc, Mrc},
     NeqAssign,
@@ -204,13 +204,59 @@ impl Component for App {
                         self.model
                             .selected_chat_id
                             .neq_assign(state.shared.selected_chat_id);
-                        self.model
-                            .selected_chat
-                            .neq_assign(state.shared.selected_chat);
-                        self.model
-                            .selected_chat_length
-                            .neq_assign(state.shared.selected_chat_length);
                         return true;
+                    }
+                    Response::Event { account, event } => {
+                        match event {
+                            Event::MessagesChanged { chat_id } => {
+                                info!("changed {}", chat_id);
+                                // refresh chat list
+                                let mut messages = vec![Msg::WsRequest(Request::LoadChatList {
+                                    start_index: self.model.chats_range.0,
+                                    stop_index: self.model.chats_range.1,
+                                })];
+
+                                if *self.model.selected_chat_id.as_ref() == Some(chat_id) {
+                                    // if the selected chat changed, refresh that
+                                    messages.push(Msg::WsRequest(Request::LoadMessageList {
+                                        start_index: self.model.messages_range.0,
+                                        stop_index: self.model.messages_range.1,
+                                    }));
+                                }
+
+                                self.link.send_message_batch(messages);
+                            }
+                            Event::MessageIncoming { chat_id } => {
+                                info!("incoming {}", chat_id);
+                                // refresh chat list
+                                let mut messages = vec![Msg::WsRequest(Request::LoadChatList {
+                                    start_index: self.model.chats_range.0,
+                                    stop_index: self.model.chats_range.1,
+                                })];
+
+                                if *self.model.selected_chat_id.as_ref() == Some(chat_id) {
+                                    // if the selected chat changed, refresh that
+                                    messages.push(Msg::WsRequest(Request::LoadMessageList {
+                                        start_index: self.model.messages_range.0,
+                                        stop_index: self.model.messages_range.1 + 1,
+                                    }));
+                                }
+
+                                self.link.send_message_batch(messages);
+                            }
+                            Event::Log(log) => match log {
+                                shared::Log::Info(msg) => {
+                                    // info!("[{}]: {:?}", account, msg);
+                                }
+                                shared::Log::Warning(msg) => {
+                                    warn!("[{}]: {:?}", account, msg);
+                                }
+                                shared::Log::Error(msg) => {
+                                    error!("[{}]: {:?}", account, msg);
+                                }
+                            },
+                            _ => {}
+                        }
                     }
                 },
                 Err(err) => {

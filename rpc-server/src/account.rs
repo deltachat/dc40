@@ -47,10 +47,7 @@ impl Drop for Account {
 pub struct AccountState {
     pub logged_in: Login,
     pub email: String,
-    pub chat_states: HashMap<ChatId, ChatState>,
-    pub selected_chat: Option<ChatState>,
     pub selected_chat_id: Option<ChatId>,
-    pub chatlist: Chatlist,
 }
 
 impl Account {
@@ -69,10 +66,6 @@ impl Account {
             .await
             .map_err(|err| anyhow!("{:?}", err))?;
 
-        let chatlist = Chatlist::try_load(&context, 0, None, None)
-            .await
-            .map_err(|err| anyhow!("failed to load chats: {:?}", err))?;
-
         let sender = receiver.clone();
         let events = context.get_event_emitter();
 
@@ -89,10 +82,7 @@ impl Account {
             state: Arc::new(RwLock::new(AccountState {
                 logged_in: Login::default(),
                 email: email.to_string(),
-                selected_chat: None,
                 selected_chat_id: None,
-                chatlist,
-                chat_states: Default::default(),
             })),
             events: receiver,
         };
@@ -190,8 +180,7 @@ impl Account {
         let mut chats = Vec::with_capacity(len);
         for i in start_index..=stop_index {
             let chat_id = chatlist.get_chat_id(i);
-            let (_, chat_state) =
-                load_chat_state(self.context.clone(), self.state.clone(), chat_id).await?;
+            let (_, chat_state) = load_chat_state(self.context.clone(), chat_id).await?;
             if let Some(s) = chat_state {
                 chats.push(s);
             }
@@ -202,9 +191,6 @@ impl Account {
 
     pub async fn select_chat(&self, chat_id: ChatId) -> Result<()> {
         info!("selecting chat {:?}", chat_id);
-        let (_, chat_state) =
-            load_chat_state(self.context.clone(), self.state.clone(), chat_id).await?;
-
         let mut ls = self.state.write().await;
         ls.selected_chat_id = Some(chat_id);
 
@@ -212,10 +198,6 @@ impl Account {
         chat::marknoticed_chat(&self.context, chat_id)
             .await
             .map_err(|err| anyhow!("failed to mark noticed: {:?}", err))?;
-
-        if let Some(chat_state) = chat_state {
-            ls.selected_chat = Some(chat_state);
-        }
 
         Ok(())
     }
@@ -293,7 +275,6 @@ impl Account {
         info!("Subscribed");
         let mut events = self.events.clone();
         let state = self.state.clone();
-        let context = self.context.clone();
 
         task::spawn(async move {
             // subscribe to events
@@ -302,63 +283,125 @@ impl Account {
                     EventType::ConfigureProgress(0) => {
                         state.write().await.logged_in = Login::Error("failed to login".into());
                         let local_state = local_state.read().await;
-                        local_state.send_update(writer.clone()).await
+                        local_state
+                            .send_event(
+                                writer.clone(),
+                                event.id,
+                                shared::Event::Configure(shared::Progress::Error),
+                            )
+                            .await
                     }
                     EventType::ImexProgress(0) => {
                         state.write().await.logged_in = Login::Error("failed to import".into());
                         let local_state = local_state.read().await;
-                        local_state.send_update(writer.clone()).await
+                        local_state
+                            .send_event(
+                                writer.clone(),
+                                event.id,
+                                shared::Event::Imex(shared::Progress::Error),
+                            )
+                            .await
                     }
-                    EventType::ConfigureProgress(1000)
-                    | EventType::ImexProgress(1000)
-                    | EventType::ImapConnected(_)
-                    | EventType::SmtpConnected(_) => {
+                    EventType::ConfigureProgress(n) => {
+                        let p = if n == 1000 {
+                            shared::Progress::Success
+                        } else {
+                            state.write().await.logged_in = Login::Progress(n);
+                            shared::Progress::Step(n)
+                        };
+                        local_state
+                            .read()
+                            .await
+                            .send_event(writer.clone(), event.id, shared::Event::Configure(p))
+                            .await
+                    }
+                    EventType::ImexProgress(n) => {
+                        let p = if n == 1000 {
+                            shared::Progress::Success
+                        } else {
+                            state.write().await.logged_in = Login::Progress(n);
+                            shared::Progress::Step(n)
+                        };
+                        local_state
+                            .read()
+                            .await
+                            .send_event(writer.clone(), event.id, shared::Event::Imex(p))
+                            .await
+                    }
+                    EventType::ImapConnected(_) | EventType::SmtpConnected(_) => {
                         info!("logged in");
                         state.write().await.logged_in = Login::Success;
-                        let local_state = local_state.read().await;
-                        local_state.send_update(writer.clone()).await
+                        local_state
+                            .read()
+                            .await
+                            .send_event(writer.clone(), event.id, shared::Event::Connected)
+                            .await
                     }
-                    EventType::ConfigureProgress(i) | EventType::ImexProgress(i) => {
-                        info!("configure progres: {}/1000", i);
-                        state.write().await.logged_in = Login::Progress(i);
-                        let local_state = local_state.read().await;
-                        local_state.send_update(writer.clone()).await
+                    EventType::MsgDelivered { chat_id, .. }
+                    | EventType::MsgFailed { chat_id, .. }
+                    | EventType::IncomingMsg { chat_id, .. } => {
+                        local_state
+                            .read()
+                            .await
+                            .send_event(
+                                writer.clone(),
+                                event.id,
+                                shared::Event::MessageIncoming {
+                                    chat_id: chat_id.to_u32(),
+                                },
+                            )
+                            .await
                     }
                     EventType::MsgsChanged { chat_id, .. }
-                    | EventType::IncomingMsg { chat_id, .. }
-                    | EventType::MsgDelivered { chat_id, .. }
                     | EventType::MsgRead { chat_id, .. }
-                    | EventType::MsgFailed { chat_id, .. }
                     | EventType::ChatModified(chat_id) => {
-                        // let res =
-                        //     refresh_message_list(context.clone(), state.clone(), chat_id))
-                        //         .try_join(refresh_chat_list(context.clone(), state.clone()))
-                        //         .try_join(refresh_chat_state(
-                        //             context.clone(),
-                        //             state.clone(),
-                        //             chat_id,
-                        //         ))
-                        //         .await;
-
-                        // if let Err(err) = res {
-                        //     Err(err)
-                        // } else {
-                        //     let local_state = local_state.read().await;
-                        //     local_state.send_update(writer.clone()).await
-                        // }
-                        Ok(())
+                        local_state
+                            .read()
+                            .await
+                            .send_event(
+                                writer.clone(),
+                                event.id,
+                                shared::Event::MessagesChanged {
+                                    chat_id: chat_id.to_u32(),
+                                },
+                            )
+                            .await
                     }
                     EventType::Info(msg) => {
                         info!("{}", msg);
-                        Ok(())
+                        local_state
+                            .read()
+                            .await
+                            .send_event(
+                                writer.clone(),
+                                event.id,
+                                shared::Event::Log(shared::Log::Info(msg)),
+                            )
+                            .await
                     }
                     EventType::Warning(msg) => {
                         warn!("{}", msg);
-                        Ok(())
+                        local_state
+                            .read()
+                            .await
+                            .send_event(
+                                writer.clone(),
+                                event.id,
+                                shared::Event::Log(shared::Log::Warning(msg)),
+                            )
+                            .await
                     }
                     EventType::Error(msg) => {
                         error!("{}", msg);
-                        Ok(())
+                        local_state
+                            .read()
+                            .await
+                            .send_event(
+                                writer.clone(),
+                                event.id,
+                                shared::Event::Log(shared::Log::Error(msg)),
+                            )
+                            .await
                     }
                     _ => {
                         debug!("{:?}", event);
@@ -388,13 +431,11 @@ pub struct RemoteEvent {
     event: String,
 }
 
-async fn load_chat_state(
-    context: Context,
-    state: Arc<RwLock<AccountState>>,
-    chat_id: ChatId,
-) -> Result<(Chat, Option<ChatState>)> {
-    let state = state.read().await;
-    let chats = &state.chatlist;
+async fn load_chat_state(context: Context, chat_id: ChatId) -> Result<(Chat, Option<ChatState>)> {
+    let chats = Chatlist::try_load(&context, 0, None, None)
+        .await
+        .map_err(|err| anyhow!("failed to load chats: {:?}", err))?;
+
     let chat = Chat::load_from_db(&context, chat_id)
         .await
         .map_err(|err| anyhow!("failed to load chats: {:?}", err))?;
@@ -405,7 +446,7 @@ async fn load_chat_state(
         let header = lot.get_text1().map(|s| s.to_string()).unwrap_or_default();
         let preview = lot.get_text2().map(|s| s.to_string()).unwrap_or_default();
 
-        let index = state.chatlist.get_index_for_id(chat_id);
+        let index = chats.get_index_for_id(chat_id);
 
         Some(ChatState {
             id: chat_id.to_u32(),
