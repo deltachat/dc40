@@ -1,4 +1,4 @@
-# delta.chat next
+# dc40
 
 ## Running
 
@@ -9,6 +9,5 @@ $ npm start
 ```
 
 ```sh
-$ cd rpc-server
-$ cargo run --release
+$ cargo run -p dc40-backend --release
 ```

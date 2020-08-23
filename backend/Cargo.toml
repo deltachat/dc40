@@ -1,11 +1,11 @@
 [package]
-name = "rpc-server"
+name = "dc40-backend"
 version = "0.1.0"
 authors = ["dignifiedquire <me@dignifiedquire.com>"]
 edition = "2018"
 
 [dependencies]
-shared = { path = "../shared" }
+shared = { path = "../shared", package = "dc40-shared" }
 deltachat = { git = "https://github.com/deltachat/deltachat-core-rust", branch = "master"}
 async-std = "1.6.0"
 serde = "1.0.104"

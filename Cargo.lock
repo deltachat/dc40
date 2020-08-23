@@ -930,14 +930,36 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d4d0e2d24e5ee3b23a01de38eefdcd978907890701f08ffffd4cb457ca4ee8d6"
 
 [[package]]
-name = "dc-next-client"
+name = "dc40-backend"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "async-std",
+ "async-tungstenite",
+ "bincode",
+ "broadcaster",
+ "dc40-shared",
+ "deltachat",
+ "dirs",
+ "femme",
+ "futures 0.3.5",
+ "glob",
+ "lazy_static",
+ "log",
+ "num-traits",
+ "serde",
+ "time 0.2.16",
+]
+
+[[package]]
+name = "dc40-frontend"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "dc40-shared",
  "linkify",
  "log",
  "serde",
- "shared",
  "strum 0.17.1",
  "strum_macros 0.17.1",
  "time 0.2.16",
@@ -948,6 +970,16 @@ dependencies = [
  "wee_alloc",
  "yew",
  "yewtil",
+]
+
+[[package]]
+name = "dc40-shared"
+version = "0.1.0"
+dependencies = [
+ "num-derive",
+ "num-traits",
+ "serde",
+ "time 0.2.16",
 ]
 
 [[package]]
@@ -2756,28 +2788,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "rpc-server"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "async-std",
- "async-tungstenite",
- "bincode",
- "broadcaster",
- "deltachat",
- "dirs",
- "femme",
- "futures 0.3.5",
- "glob",
- "lazy_static",
- "log",
- "num-traits",
- "serde",
- "shared",
- "time 0.2.16",
-]
-
-[[package]]
 name = "rsa"
 version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3048,16 +3058,6 @@ dependencies = [
  "digest 0.9.0",
  "keccak",
  "opaque-debug 0.3.0",
-]
-
-[[package]]
-name = "shared"
-version = "0.1.0"
-dependencies = [
- "num-derive",
- "num-traits",
- "serde",
- "time 0.2.16",
 ]
 
 [[package]]

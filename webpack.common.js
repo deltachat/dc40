@@ -4,7 +4,7 @@ const HtmlWebpackPlugin = require('html-webpack-plugin')
 const WasmPackPlugin = require('@wasm-tool/wasm-pack-plugin');
 
 module.exports = {
-  entry: './client.js',
+  entry: './frontend/client.js',
   output: {
     filename: 'main.js',
     path: path.resolve(__dirname, 'build'),
@@ -61,7 +61,7 @@ module.exports = {
       chunkFilename: '[id].css',
      }),
     new WasmPackPlugin({
-      crateDirectory: ".",
+      crateDirectory: "./frontend",
       extraArgs: "--no-typescript",
     })
   ],

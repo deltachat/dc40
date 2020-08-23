@@ -55,13 +55,13 @@ function createWindow() {
       contextIsolation: true,
       enableRemoteModule: false,
     },
-    icon: path.join(__dirname, '..', 'images', 'deltachat.png')
+    icon: path.join(__dirname, '..', '..', 'images', 'deltachat.png')
   });
 
   mainWindow.loadURL(
     isDev
       ? "http://localhost:3000"
-      : `file://${path.join(__dirname, "../build/index.html")}`
+      : `file://${path.join(__dirname, "../../build/index.html")}`
   );
   mainWindow.on("closed", () => (mainWindow = null));
 
