@@ -38,24 +38,36 @@
     margin: 5px 0;
 
     .message-text.followup {
+      display: flex;
+      flex-direction: row;
+
       .message-body {
         margin-left: 40px;
       }
-      
-      .message-timestamp {
+
+      .message-prefix {
         display: none;
-        margin-left: 5px;
+        margin-left: -9px;
         margin-right: 5px;
-        flex: 0 0 30px;
+        align-items: center;
+      }
+
+      .message-timestamp {
+        flex: 0;
+        margin: 0;
         text-align: right;
+        padding: 0;
+      }
+      .message-status {
+        flex: 0 0 auto;
       }
     }
     
     &:hover {
       background-color: rgba(0, 0, 0, 0.02);
       .message-text.followup {
-        .message-timestamp {
-          display: inline-block;
+        .message-prefix {
+          display: flex;
         }
         .message-body.message-body {
           margin-left: 0px;
@@ -105,12 +117,22 @@
     }
 
     .message-timestamp {
-      flex: 0 0 60px;
+      flex: 0 0 auto;
       margin-left: 10px;
+      margin-right: 10px;
       font-weight: 300;
       font-size: 13px;
-      padding: 3px 0 0 0;
       color: #afb6c1;
+    }
+
+    .message-status {
+      width: 16px;
+      max-width: 16px;
+      background-color: #afb6c1;
+      
+      &.alert {
+        background-color: @red;
+      }
     }
 
     .message-text {
@@ -128,11 +150,11 @@
         .message-header {
           flex: 0 0 20px;
           display: flex;
+          align-items: center;
 
           .message-sender {
             font-weight: 700;
-            height: 20px;
-            flex: 0;
+            flex: 0 0 auto;
           }
         }
 

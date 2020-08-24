@@ -45,6 +45,7 @@ impl Component for Message {
                 id,
                 timestamp,
                 is_first,
+                state,
                 ..
             } => {
                 let image = if *is_first {
@@ -89,6 +90,22 @@ impl Component for Message {
                 };
 
                 let text = text.as_ref().map(process_text).unwrap_or_default();
+                let timestamp = html! {
+                    <div class="message-timestamp">{timestamp.format("%R")}</div>
+                };
+                let status = {
+                    let icon = match state.as_ref() {
+                        "Delivered" | "Noticed" | "Seen" => "checkmark",
+                        "Read" => "checkmark-done",
+                        "Failed" => "alert",
+                        "Pending" | "Draft" | "Preparing" => "hourglass",
+                        _ => "hourglass",
+                    };
+                    html! {
+                        <div class=format!("message-status icon small {}", icon)></div>
+                    }
+                };
+                    
                 let content = if *is_info {
                     html! {
                         <div class="message-info">{text}</div>
@@ -100,7 +117,8 @@ impl Component for Message {
                             <div class="message-body">
                                 <div class="message-header">
                                     <div class="message-sender">{&from_first_name}</div>
-                                    <div class="message-timestamp">{timestamp.format("%R")}</div>
+                                    { timestamp }
+                                    { status }
                                 </div>
                                 { file }
                                 <div class="message-inner-text">{text}</div>
@@ -110,8 +128,9 @@ impl Component for Message {
                 } else {
                     html! {
                         <div class="message-text followup">
-                            <div class="message-timestamp">
-                                {timestamp.format("%R")}
+                            <div class="message-prefix">
+                                { status }
+                                { timestamp }
                             </div>
                             <div class="message-body">
                                 { file }
