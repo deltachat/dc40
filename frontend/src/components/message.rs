@@ -1,3 +1,5 @@
+use chrono::prelude::*;
+use log::*;
 use shared::*;
 use yew::{html, virtual_dom::VList, Component, ComponentLink, Html, Properties, ShouldRender};
 use yewtil::NeqAssign;
@@ -90,8 +92,9 @@ impl Component for Message {
                 };
 
                 let text = text.as_ref().map(process_text).unwrap_or_default();
+                let local = Local.from_utc_datetime(&timestamp.naive_utc());
                 let timestamp = html! {
-                    <div class="message-timestamp">{timestamp.format("%R")}</div>
+                    <div class="message-timestamp">{local.format("%R")}</div>
                 };
                 let status = {
                     let icon = match state.as_ref() {
@@ -105,7 +108,7 @@ impl Component for Message {
                         <div class=format!("message-status icon small {}", icon)></div>
                     }
                 };
-                    
+
                 let content = if *is_info {
                     html! {
                         <div class="message-info">{text}</div>
@@ -147,9 +150,10 @@ impl Component for Message {
                 }
             }
             ChatMessage::DayMarker(time) => {
+                let local = Local.from_utc_datetime(&time.naive_utc());
                 html! {
                     <div class="day-marker" key=time.timestamp()>
-                        {time.format("%A, %B %-d")}
+                        {local.format("%A, %B %-d")}
                     </div>
                 }
             }

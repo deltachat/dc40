@@ -1,7 +1,9 @@
-use num_derive::{FromPrimitive, ToPrimitive};
-use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::PathBuf;
+
+use chrono::{DateTime, Utc};
+use num_derive::{FromPrimitive, ToPrimitive};
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub enum Response {
@@ -65,7 +67,7 @@ pub struct SharedState {
 #[derive(Debug, Serialize, Clone, Deserialize, PartialEq)]
 pub enum ChatItem {
     Message(u32),
-    DayMarker(time::OffsetDateTime),
+    DayMarker(DateTime<Utc>),
 }
 
 #[derive(Debug, Serialize, Clone, Deserialize, PartialEq)]
@@ -80,14 +82,14 @@ pub enum ChatMessage {
         state: String,
         text: Option<String>,
         starred: bool,
-        timestamp: time::OffsetDateTime,
+        timestamp: DateTime<Utc>,
         is_info: bool,
         file: Option<PathBuf>,
         file_height: i32,
         file_width: i32,
         is_first: bool,
     },
-    DayMarker(time::OffsetDateTime),
+    DayMarker(DateTime<Utc>),
 }
 
 #[derive(Debug, Serialize, Clone, Deserialize, PartialEq, Eq)]
@@ -97,7 +99,7 @@ pub struct ChatState {
     pub name: String,
     pub header: String,
     pub preview: String,
-    pub timestamp: time::OffsetDateTime,
+    pub timestamp: DateTime<Utc>,
     pub state: String,
     pub profile_image: Option<PathBuf>,
     pub fresh_msg_cnt: usize,

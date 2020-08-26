@@ -9,11 +9,7 @@ use log::{info, warn};
 use num_traits::FromPrimitive;
 use shared::*;
 
-mod account;
-mod state;
-
-use crate::account::*;
-use crate::state::*;
+use dc40_backend::{account::*, state::*};
 
 fn main() {
     femme::start(log::LevelFilter::Info).unwrap();

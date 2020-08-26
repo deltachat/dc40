@@ -677,9 +677,12 @@ version = "0.4.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "942f72db697d8767c22d46a598e01f2d3b475501ea43d0db4f16d90259182d0b"
 dependencies = [
+ "js-sys",
  "num-integer",
  "num-traits",
+ "serde",
  "time 0.1.43",
+ "wasm-bindgen",
 ]
 
 [[package]]
@@ -938,6 +941,7 @@ dependencies = [
  "async-tungstenite",
  "bincode",
  "broadcaster",
+ "chrono",
  "dc40-shared",
  "deltachat",
  "dirs",
@@ -948,7 +952,6 @@ dependencies = [
  "log",
  "num-traits",
  "serde",
- "time 0.2.16",
 ]
 
 [[package]]
@@ -956,13 +959,13 @@ name = "dc40-frontend"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "chrono",
  "dc40-shared",
  "linkify",
  "log",
  "serde",
  "strum 0.17.1",
  "strum_macros 0.17.1",
- "time 0.2.16",
  "wasm-bindgen",
  "wasm-bindgen-test",
  "wasm-logger",
@@ -976,10 +979,10 @@ dependencies = [
 name = "dc40-shared"
 version = "0.1.0"
 dependencies = [
+ "chrono",
  "num-derive",
  "num-traits",
  "serde",
- "time 0.2.16",
 ]
 
 [[package]]
@@ -3368,7 +3371,6 @@ checksum = "3a51cadc5b1eec673a685ff7c33192ff7b7603d0b75446fb354939ee615acb15"
 dependencies = [
  "cfg-if",
  "libc",
- "serde",
  "standback",
  "stdweb",
  "time-macros",

@@ -8,6 +8,7 @@ use async_std::task;
 use async_tungstenite::tungstenite::Error;
 use async_tungstenite::tungstenite::Message;
 use broadcaster::BroadcastChannel;
+use chrono::prelude::*;
 use deltachat::{
     chat::{self, Chat, ChatId},
     chatlist::Chatlist,
@@ -431,6 +432,11 @@ pub struct RemoteEvent {
     event: String,
 }
 
+fn get_timestamp(ts: i64) -> DateTime<Utc> {
+    let naive = NaiveDateTime::from_timestamp(ts, 0);
+    DateTime::from_utc(naive, Utc)
+}
+
 async fn load_chat_state(context: Context, chat_id: ChatId) -> Result<(Chat, Option<ChatState>)> {
     let chats = Chatlist::try_load(&context, 0, None, None)
         .await
@@ -454,7 +460,7 @@ async fn load_chat_state(context: Context, chat_id: ChatId) -> Result<(Chat, Opt
             name: chat.get_name().to_string(),
             header,
             preview,
-            timestamp: time::OffsetDateTime::from_unix_timestamp(lot.get_timestamp()),
+            timestamp: get_timestamp(lot.get_timestamp()),
             state: lot.get_state().to_string(),
             profile_image: chat.get_profile_image(&context).await.map(Into::into),
             can_send: chat.can_send(),
@@ -486,9 +492,9 @@ async fn refresh_message_list(
     .into_iter()
     .filter_map(|item| match item {
         chat::ChatItem::Message { msg_id } => Some(ChatItem::Message(msg_id.to_u32())),
-        chat::ChatItem::DayMarker { timestamp } => Some(ChatItem::DayMarker(
-            time::OffsetDateTime::from_unix_timestamp(timestamp * 86_400),
-        )),
+        chat::ChatItem::DayMarker { timestamp } => {
+            Some(ChatItem::DayMarker(get_timestamp(timestamp * 86_400)))
+        }
         _ => None,
     })
     .collect();
@@ -553,7 +559,7 @@ async fn refresh_message_list(
                     starred: msg.is_starred(),
                     state: msg.get_state().to_string(),
                     text: msg.get_text(),
-                    timestamp: time::OffsetDateTime::from_unix_timestamp(msg.get_sort_timestamp()),
+                    timestamp: get_timestamp(msg.get_sort_timestamp()),
                     is_info: msg.is_info(),
                     file: msg.get_file(&context).map(Into::into),
                     file_width: msg.get_width(),
