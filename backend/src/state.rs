@@ -49,11 +49,14 @@ impl LocalState {
 
                             let account = Account::new(account_name).await?;
                             // attempt to configure it
-                            account.configure().await?;
-                            info!("configured");
-                            account.context.start_io().await;
-
-                            accounts.insert(account_name.to_string(), account);
+                            match account.configure().await {
+                              Ok(()) => {
+                                info!("configured");
+                                account.context.start_io().await;
+                                accounts.insert(account_name.to_string(), account);
+                              },
+                              Err(err) => info!("Account could not be configured: {}", err)
+                            }
                         }
                         None => {
                             warn!("Ignoring invalid filename: '{}'", path.display());
@@ -66,16 +69,13 @@ impl LocalState {
             }
         }
 
-        info!("selecting account");
-
         // Select the first one by default
         let selected_account = accounts.keys().next().cloned();
+        info!("selecting account {:?}", selected_account);
         if let Some(ref selected) = selected_account {
             accounts
                 .get(selected)
-                .unwrap()
-                .load_chat_list(0, 10)
-                .await?;
+                .unwrap();
         }
         info!("loaded state");
 
