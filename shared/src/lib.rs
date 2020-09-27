@@ -21,6 +21,9 @@ pub enum Response {
         len: usize,
         chats: Vec<ChatState>,
     },
+    Account {
+      account: String,
+    },
     Event {
         account: u32,
         event: Event,
