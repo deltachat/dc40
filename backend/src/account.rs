@@ -148,12 +148,15 @@ impl Account {
         while let Some(event) = events.next().await {
             info!("configure event {:?}", event);
             match event.typ {
-                EventType::ConfigureProgress(0) => {
-                    bail!("Failed to login");
-                }
-                EventType::ConfigureProgress(1000) => {
-                    break;
-                }
+                EventType::ConfigureProgress { progress, .. } => match progress {
+                    0 => {
+                        bail!("Failed to login");
+                    }
+                    1000 => {
+                        break;
+                    }
+                    _ => {}
+                },
                 EventType::ImapConnected(_) | EventType::SmtpConnected(_) => {
                     break;
                 }
@@ -281,53 +284,55 @@ impl Account {
             // subscribe to events
             while let Some(event) = events.next().await {
                 let res = match event.typ {
-                    EventType::ConfigureProgress(0) => {
-                        state.write().await.logged_in = Login::Error("failed to login".into());
-                        let local_state = local_state.read().await;
-                        local_state
-                            .send_event(
-                                writer.clone(),
-                                event.id,
-                                shared::Event::Configure(shared::Progress::Error),
-                            )
-                            .await
-                    }
-                    EventType::ImexProgress(0) => {
-                        state.write().await.logged_in = Login::Error("failed to import".into());
-                        let local_state = local_state.read().await;
-                        local_state
-                            .send_event(
-                                writer.clone(),
-                                event.id,
-                                shared::Event::Imex(shared::Progress::Error),
-                            )
-                            .await
-                    }
-                    EventType::ConfigureProgress(n) => {
-                        let p = if n == 1000 {
-                            shared::Progress::Success
+                    EventType::ConfigureProgress { progress, .. } => {
+                        if progress == 0 {
+                            state.write().await.logged_in = Login::Error("failed to login".into());
+                            let local_state = local_state.read().await;
+                            local_state
+                                .send_event(
+                                    writer.clone(),
+                                    event.id,
+                                    shared::Event::Configure(shared::Progress::Error),
+                                )
+                                .await
                         } else {
-                            state.write().await.logged_in = Login::Progress(n);
-                            shared::Progress::Step(n)
-                        };
-                        local_state
-                            .read()
-                            .await
-                            .send_event(writer.clone(), event.id, shared::Event::Configure(p))
-                            .await
+                            let p = if progress == 1000 {
+                                shared::Progress::Success
+                            } else {
+                                state.write().await.logged_in = Login::Progress(progress);
+                                shared::Progress::Step(progress)
+                            };
+                            local_state
+                                .read()
+                                .await
+                                .send_event(writer.clone(), event.id, shared::Event::Configure(p))
+                                .await
+                        }
                     }
-                    EventType::ImexProgress(n) => {
-                        let p = if n == 1000 {
-                            shared::Progress::Success
+                    EventType::ImexProgress(progress) => {
+                        if progress == 0 {
+                            state.write().await.logged_in = Login::Error("failed to import".into());
+                            let local_state = local_state.read().await;
+                            local_state
+                                .send_event(
+                                    writer.clone(),
+                                    event.id,
+                                    shared::Event::Imex(shared::Progress::Error),
+                                )
+                                .await
                         } else {
-                            state.write().await.logged_in = Login::Progress(n);
-                            shared::Progress::Step(n)
-                        };
-                        local_state
-                            .read()
-                            .await
-                            .send_event(writer.clone(), event.id, shared::Event::Imex(p))
-                            .await
+                            let p = if progress == 1000 {
+                                shared::Progress::Success
+                            } else {
+                                state.write().await.logged_in = Login::Progress(progress);
+                                shared::Progress::Step(progress)
+                            };
+                            local_state
+                                .read()
+                                .await
+                                .send_event(writer.clone(), event.id, shared::Event::Imex(p))
+                                .await
+                        }
                     }
                     EventType::ImapConnected(_) | EventType::SmtpConnected(_) => {
                         info!("logged in");
