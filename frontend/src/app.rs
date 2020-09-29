@@ -99,8 +99,14 @@ impl App {
                 <div class="chat">
                   <div class="chat-header"> {
                     if let Some(chat) = &*self.model.selected_chat {
+                        let (title, subtitle) = get_titles(&chat);
                         html! {
-                            <div class="chat-header-name">{&chat.name}</div>
+                            <div>
+                              <div class="chat-header-name">{title}</div>
+                              <div class="chat-header-subtitle">
+                                { subtitle }
+                              </div>
+                            </div>
                         }
                     } else {
                         html! {}
@@ -204,6 +210,9 @@ impl Component for App {
                         self.model
                             .selected_chat_id
                             .neq_assign(state.shared.selected_chat_id);
+                        self.model
+                            .selected_chat
+                            .neq_assign(state.shared.selected_chat);
                         return true;
                     }
                     Response::Event { account, event } => {
@@ -285,5 +294,35 @@ impl Component for App {
                 { self.view_data() }
             </div>
         }
+    }
+}
+
+/// Get the title and subtitle texts.
+fn get_titles(chat: &ChatState) -> (String, String) {
+    if chat.id == 1 {
+        // deaddrop
+        (
+            "Contact Requests".to_string(),
+            "Click message to start chatting".to_string(),
+        )
+    } else {
+        let title = chat.name.to_string();
+
+        let subtitle = if chat.chat_type == "Group" || chat.chat_type == "VerifiedGroup" {
+            if chat.member_count == 1 {
+                "1 member".to_string()
+            } else {
+                format!("{} members", chat.member_count)
+            }
+        } else if chat.is_self_talk {
+            "Messages I sent to myself".to_string()
+        } else if chat.is_device_talk {
+            "Locally generated messages".to_string()
+        } else {
+            // TODO: print first member address
+            "Private Chat".to_string()
+        };
+
+        (title, subtitle)
     }
 }

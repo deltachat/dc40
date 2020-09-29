@@ -144,17 +144,18 @@ impl LocalState {
         }
 
         let errors = self.errors.iter().map(|e| e.to_string()).collect();
-        let selected_chat_id = if let Some(ref account_name) = self.selected_account {
-            let account = self
-                .accounts
-                .get(account_name)
-                .expect("invalid account state");
+        let (selected_chat_id, selected_chat) =
+            if let Some(ref account_name) = self.selected_account {
+                let account = self
+                    .accounts
+                    .get(account_name)
+                    .expect("invalid account state");
 
-            let state = account.state.read().await;
-            state.selected_chat_id.clone()
-        } else {
-            None
-        };
+                let state = account.state.read().await;
+                (state.selected_chat_id.clone(), state.selected_chat.clone())
+            } else {
+                (None, None)
+            };
 
         Response::RemoteUpdate {
             state: State {
@@ -163,6 +164,7 @@ impl LocalState {
                     errors,
                     selected_account: self.selected_account.clone(),
                     selected_chat_id: selected_chat_id.map(|s| s.to_u32()),
+                    selected_chat,
                 },
             },
         }

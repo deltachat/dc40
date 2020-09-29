@@ -62,6 +62,7 @@ pub struct SharedState {
     pub errors: Vec<String>,
     pub selected_account: Option<String>,
     pub selected_chat_id: Option<u32>,
+    pub selected_chat: Option<ChatState>,
 }
 
 #[derive(Debug, Serialize, Clone, Deserialize, PartialEq)]
@@ -108,6 +109,7 @@ pub struct ChatState {
     pub is_device_talk: bool,
     pub chat_type: String,
     pub color: u32,
+    pub member_count: usize,
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone)]

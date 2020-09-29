@@ -49,6 +49,7 @@ pub struct AccountState {
     pub logged_in: Login,
     pub email: String,
     pub selected_chat_id: Option<ChatId>,
+    pub selected_chat: Option<ChatState>,
 }
 
 impl Account {
@@ -84,6 +85,7 @@ impl Account {
                 logged_in: Login::default(),
                 email: email.to_string(),
                 selected_chat_id: None,
+                selected_chat: None,
             })),
             events: receiver,
         };
@@ -197,6 +199,8 @@ impl Account {
         info!("selecting chat {:?}", chat_id);
         let mut ls = self.state.write().await;
         ls.selected_chat_id = Some(chat_id);
+        let (_, selected_chat) = load_chat_state(self.context.clone(), chat_id).await?;
+        ls.selected_chat = selected_chat;
 
         // mark as noticed
         chat::marknoticed_chat(&self.context, chat_id)
@@ -474,6 +478,9 @@ async fn load_chat_state(context: Context, chat_id: ChatId) -> Result<(Chat, Opt
             is_device_talk: chat.is_device_talk(),
             is_self_talk: chat.is_self_talk(),
             fresh_msg_cnt: chat_id.get_fresh_msg_cnt(&context).await,
+            member_count: deltachat::chat::get_chat_contacts(&context, chat_id)
+                .await
+                .len(),
         })
     } else {
         None
