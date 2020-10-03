@@ -139,34 +139,41 @@ impl Account {
     }
 
     pub async fn configure(&self) -> Result<()> {
+        use deltachat::config::Config;
         info!("configure");
 
-        self.context
+        let is_configured = self.context.get_config_int(Config::Configured).await;
+        if is_configured == 1 {
+          info!("Account already configured");
+          return Ok(());
+        } else {
+          self.context
             .configure()
             .await
             .map_err(|err| anyhow!("{:?}", err))?;
 
-        let mut events = self.events.clone();
-        while let Some(event) = events.next().await {
-            info!("configure event {:?}", event);
-            match event.typ {
-                EventType::ConfigureProgress { progress, .. } => match progress {
-                    0 => {
-                        bail!("Failed to login");
-                    }
-                    1000 => {
-                        break;
-                    }
-                    _ => {}
-                },
-                EventType::ImapConnected(_) | EventType::SmtpConnected(_) => {
-                    break;
-                }
-                _ => {}
-            }
-        }
+          let mut events = self.events.clone();
+          while let Some(event) = events.next().await {
+              info!("configure event {:?}", event);
+              match event.typ {
+                  EventType::ConfigureProgress { progress, .. } => match progress {
+                      0 => {
+                          bail!("Failed to login");
+                      }
+                      1000 => {
+                          break;
+                      }
+                      _ => {}
+                  },
+                  EventType::ImapConnected(_) | EventType::SmtpConnected(_) => {
+                      break;
+                  }
+                  _ => {}
+              }
+          }
 
-        Ok(())
+          Ok(())
+        }
     }
 
     pub async fn load_chat_list(
@@ -453,7 +460,7 @@ async fn load_chat_state(context: Context, chat_id: ChatId) -> Result<(Chat, Opt
 
     let chat = Chat::load_from_db(&context, chat_id)
         .await
-        .map_err(|err| anyhow!("failed to load chats: {:?}", err))?;
+        .map_err(|err| anyhow!("failed to load chat: {:?}", err))?;
 
     let chat_state = if let Some(index) = chats.get_index_for_id(chat_id) {
         let lot = chats.get_summary(&context, index, Some(&chat)).await;

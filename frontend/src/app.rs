@@ -228,7 +228,6 @@ impl Component for App {
                     Response::ChatList { range, len, chats } => {
                         self.model.chats_range.neq_assign(range);
                         self.model.chats_len.neq_assign(len);
-                        info!("ChatList {:?}", chats);
                         self.model.chats.neq_assign(chats);
                         return true;
                     }
