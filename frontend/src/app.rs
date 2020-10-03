@@ -84,7 +84,6 @@ impl App {
             Msg::WsRequest(Request::SelectChat { account, chat_id })
         });
 
-<<<<<<< HEAD
         let create_account_callback = link.callback(move |_| Msg::ShowAccountCreation);
         let cancel_account_create_callback = link.callback(move |_| Msg::CancelAccountCreation);
 
@@ -95,26 +94,19 @@ impl App {
         } else {
             html! {}
         };
-=======
         let select_account_callback = link.callback(move |account| {
           info!("Account switched {}", account);
           Msg::WsRequest(Request::SelectAccount { account })
       });
 
->>>>>>> Switch accounts and load chat list
         html! {
             <>
             { account_creation_modal }
               <div class="app">
                 <Sidebar
                   accounts=self.model.accounts.irc()
-<<<<<<< HEAD
-                  selected_account=self.model.selected_account.irc()
-                  create_account_callback=create_account_callback
-=======
                   selected_account=self.model.selected_account.irc(),
                   select_account_callback=select_account_callback
->>>>>>> Switch accounts and load chat list
                 />
                 <Chatlist
                   selected_account=self.model.selected_account.irc()
@@ -228,6 +220,7 @@ impl Component for App {
                     Response::ChatList { range, len, chats } => {
                         self.model.chats_range.neq_assign(range);
                         self.model.chats_len.neq_assign(len);
+                        info!("ChatList {:?}", chats);
                         self.model.chats.neq_assign(chats);
                         return true;
                     }

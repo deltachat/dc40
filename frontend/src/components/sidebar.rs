@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use shared::{ChatState, SharedAccountState};
+use shared::{SharedAccountState};
 use yew::{html, Callback, Component, ComponentLink, Html, Properties, ShouldRender};
 use yewtil::{ptr::Irc, NeqAssign};
 
