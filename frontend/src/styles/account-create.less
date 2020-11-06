@@ -1,0 +1,51 @@
+.account-create {
+  display: flex;
+  flex-direction: column;
+
+  h1 {
+    color: @darkerBlue;
+  }
+
+  .form-group {
+    display: flex;
+    flex-direction: column;
+
+    label {
+      font-weight: 400;
+      font-size: 16px;
+      color: @gray;
+      margin-bottom: 5px;
+    }
+    
+    input {
+      outline: none;
+      border: 1px solid @gray;
+      border-radius: 5px;
+      padding: 5px 10px;
+    }
+  }
+
+  .invalid-feedback {
+    min-height: 28px;
+    height: 28px;
+    color: @red;
+    margin-bottom: 20px;
+  }
+
+  .submit-button {
+    outline: none;
+    border: none;
+    color: #FFF;
+    background-color: @darkBlue;
+    font-weight: 300;
+    font-size: 18px;
+    border-radius: 5px;
+
+    transition: all 0.2s linear;
+
+    &:hover {
+      cursor: pointer;
+      background-color: @hoverBlue;
+    }
+  }
+}

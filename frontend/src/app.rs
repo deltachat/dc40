@@ -12,7 +12,8 @@ use yewtil::{
 use shared::*;
 
 use crate::components::{
-    chatlist::Chatlist, message_input::MessageInput, messages::Messages, sidebar::Sidebar,
+    chatlist::Chatlist, message_input::MessageInput, messages::Messages, modal::Modal,
+    sidebar::Sidebar,
 };
 
 #[derive(Debug)]
@@ -29,6 +30,8 @@ pub enum Msg {
     WsReady(Result<Response, Error>),
     Ignore,
     WsRequest(Request),
+    ShowAccountCreation,
+    CancelAccountCreation,
 }
 
 impl From<WsAction> for Msg {
@@ -57,6 +60,7 @@ struct Model {
     messages_range: Mrc<(usize, usize)>,
     message_items: Mrc<Vec<ChatItem>>,
     messages: Mrc<Vec<ChatMessage>>,
+    show_account_creation: bool,
 }
 
 impl App {
@@ -80,11 +84,24 @@ impl App {
             Msg::WsRequest(Request::SelectChat { account, chat_id })
         });
 
+        let create_account_callback = link.callback(move |_| Msg::ShowAccountCreation);
+        let cancel_account_create_callback = link.callback(move |_| Msg::CancelAccountCreation);
+
+        let account_creation_modal = if self.model.show_account_creation {
+            html! {
+                <Modal cancel_callback=cancel_account_create_callback />
+            }
+        } else {
+            html! {}
+        };
         html! {
             <>
+            { account_creation_modal }
+              <div class="app">
                 <Sidebar
                   accounts=self.model.accounts.irc()
                   selected_account=self.model.selected_account.irc()
+                  create_account_callback=create_account_callback
                 />
                 <Chatlist
                   selected_account=self.model.selected_account.irc()
@@ -122,6 +139,7 @@ impl App {
                    fetch_callback=messages_fetch_callback />
                   <MessageInput send_callback=onsend />
                 </div>
+            </div>
            </>
         }
     }
@@ -269,7 +287,7 @@ impl Component for App {
                     }
                 },
                 Err(err) => {
-                    warn!("{:?}", err);
+                    warn!("{:#?}", err);
                 }
             },
             Msg::Ignore => {
@@ -280,6 +298,14 @@ impl Component for App {
                     ws.send_binary(Bincode(&req));
                 }
             }
+            Msg::ShowAccountCreation => {
+                self.model.show_account_creation = true;
+                return true;
+            }
+            Msg::CancelAccountCreation => {
+                self.model.show_account_creation = false;
+                return true;
+            }
         }
         false
     }
@@ -289,11 +315,7 @@ impl Component for App {
     }
 
     fn view(&self) -> Html {
-        html! {
-            <div class="app">
-                { self.view_data() }
-            </div>
-        }
+        self.view_data()
     }
 }
 

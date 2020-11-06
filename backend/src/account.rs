@@ -100,7 +100,7 @@ impl Account {
     pub async fn import(&self, path: &str) -> Result<()> {
         use deltachat::imex;
 
-        imex::imex(&self.context, imex::ImexMode::ImportBackup, Some(path))
+        imex::imex(&self.context, imex::ImexMode::ImportBackup, path)
             .await
             .map_err(|err| anyhow!("{}", err))?;
 
@@ -568,7 +568,6 @@ async fn refresh_message_list(
                     from_first_name: from.get_first_name().to_string(),
                     from_profile_image: from.get_profile_image(&context).await.map(Into::into),
                     from_color: from.get_color(),
-                    starred: msg.is_starred(),
                     state: msg.get_state().to_string(),
                     text: msg.get_text(),
                     timestamp: get_timestamp(msg.get_sort_timestamp()),

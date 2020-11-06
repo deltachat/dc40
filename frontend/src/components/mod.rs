@@ -5,3 +5,4 @@ pub mod messages;
 pub mod sidebar;
 
 pub mod list;
+pub mod modal;

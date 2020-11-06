@@ -15,6 +15,9 @@ body {
 @import "./styles/messages";
 @import "./styles/variables";
 @import "./styles/icons";
+@import "./styles/accounts";
+@import "./styles/modal";
+@import "./styles/account-create";
 
 // Layout
 
@@ -51,45 +54,6 @@ body {
     .titlebar-stoplight .titlebar-fullscreen {
       width: 12px;
       height: 12px;
-    }
-  }
-}
-
-.account-list {
-  flex: 0 0 68px;
-  flex-direction: column;
-  background-color: @darkerBlue;
-  display: flex;
-  align-items: center;
-  height: 100%;
-
-  .account {
-    flex: 0 0 32px;
-    margin: 5px 0;
-    height: 32px;
-    width: 32px;
-    border: 3px solid transparent;
-    border-radius: 50%;
-    color: #ffffff;
-    overflow: hidden;
-    border: 1px solid rgba(255, 255, 255, 0.4);
-    transition: background-color 0.3s ease;
-    
-    &:hover {
-      cursor: pointer;
-      background-color: @hoverBlue;
-    }
-
-    &.active {
-      border: 2px solid rgba(255, 255, 255, 0.8);
-    }
-  }
-  
-  a.account {
-    display: block;
-
-    i {
-      padding: 0px;
     }
   }
 }

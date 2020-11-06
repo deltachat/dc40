@@ -82,7 +82,6 @@ pub enum ChatMessage {
         viewtype: Viewtype,
         state: String,
         text: Option<String>,
-        starred: bool,
         timestamp: DateTime<Utc>,
         is_info: bool,
         file: Option<PathBuf>,

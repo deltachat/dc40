@@ -21,6 +21,10 @@ shared = { path = "../shared", package = "dc40-shared" }
 yewtil = "0.3.0"
 linkify = "0.4"
 chrono = { version = "0.4.15", features = ["serde", "wasmbind"] }
+yew_form = { git = "https://github.com/dignifiedquire/yew_form", branch = "fix-refs"} #{ path = "../../../yew_form/yew_form" }
+yew_form_derive = { git = "https://github.com/dignifiedquire/yew_form", branch = "fix-refs"} # { path = "../../../yew_form/yew_form_derive" }
+validator = "0.10.0"
+validator_derive = "0.10.0"
 
 [dependencies.web-sys]
 version = "0.3.4"
