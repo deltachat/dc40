@@ -73,23 +73,27 @@ pub enum ChatItem {
 
 #[derive(Debug, Serialize, Clone, Deserialize, PartialEq)]
 pub enum ChatMessage {
-    Message {
-        id: u32,
-        from_id: u32,
-        from_first_name: String,
-        from_profile_image: Option<PathBuf>,
-        from_color: u32,
-        viewtype: Viewtype,
-        state: String,
-        text: Option<String>,
-        timestamp: DateTime<Utc>,
-        is_info: bool,
-        file: Option<PathBuf>,
-        file_height: i32,
-        file_width: i32,
-        is_first: bool,
-    },
+    Message(InnerChatMessage),
     DayMarker(DateTime<Utc>),
+}
+
+#[derive(Debug, Serialize, Clone, Deserialize, PartialEq)]
+pub struct InnerChatMessage {
+    pub id: u32,
+    pub from_id: u32,
+    pub from_first_name: String,
+    pub from_profile_image: Option<PathBuf>,
+    pub from_color: u32,
+    pub viewtype: Viewtype,
+    pub state: String,
+    pub text: Option<String>,
+    pub quote: Option<Box<InnerChatMessage>>,
+    pub timestamp: DateTime<Utc>,
+    pub is_info: bool,
+    pub file: Option<PathBuf>,
+    pub file_height: i32,
+    pub file_width: i32,
+    pub is_first: bool,
 }
 
 #[derive(Debug, Serialize, Clone, Deserialize, PartialEq, Eq)]

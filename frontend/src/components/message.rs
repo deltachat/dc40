@@ -35,7 +35,7 @@ impl Component for Message {
 
     fn view(&self) -> Html {
         match &self.message {
-            ChatMessage::Message {
+            ChatMessage::Message(InnerChatMessage {
                 from_color,
                 from_first_name,
                 from_profile_image,
@@ -48,8 +48,9 @@ impl Component for Message {
                 timestamp,
                 is_first,
                 state,
+                quote,
                 ..
-            } => {
+            }) => {
                 let image = if *is_first {
                     if let Some(ref profile_image) = from_profile_image {
                         html! {
@@ -90,6 +91,19 @@ impl Component for Message {
                     }
                     _ => html! {},
                 };
+                let quote_text = if let Some(quote) = quote {
+                    log::info!("{:?}", quote);
+                    html! {
+                        <div class="message-quote">
+                            <div class="message-quote-sender">{ &quote.from_first_name }</div>
+                            <div class="message-quote-text">
+                              { quote.text.as_ref().map(process_text).unwrap_or_default() }
+                            </div>
+                        </div>
+                    }
+                } else {
+                    html! {}
+                };
 
                 let text = text.as_ref().map(process_text).unwrap_or_default();
                 let local = Local.from_utc_datetime(&timestamp.naive_utc());
@@ -124,6 +138,7 @@ impl Component for Message {
                                     { status }
                                 </div>
                                 { file }
+                                { quote_text }
                                 <div class="message-inner-text">{text}</div>
                             </div>
                         </div>
@@ -137,7 +152,8 @@ impl Component for Message {
                             </div>
                             <div class="message-body">
                                 { file }
-                                <div class="message-inner-text">{text}</div>
+                                { quote_text }
+                                <div class="message-inner-text">{ text }</div>
                             </div>
                         </div>
                     }

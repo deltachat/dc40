@@ -21,7 +21,7 @@ use lazy_static::lazy_static;
 use log::{debug, error, info, warn};
 use num_traits::{FromPrimitive, ToPrimitive};
 use serde::Serialize;
-use shared::{ChatItem, ChatMessage, ChatState, Login, Viewtype};
+use shared::{ChatItem, ChatMessage, ChatState, InnerChatMessage, Login, Viewtype};
 
 use crate::state::*;
 
@@ -560,8 +560,7 @@ async fn refresh_message_list(
                 };
                 last_contact_id = Some(msg.get_from_id());
                 last_marker = false;
-
-                chat_messages.push(ChatMessage::Message {
+                let mut inner_msg = InnerChatMessage {
                     id: msg.get_id().to_u32(),
                     from_id: msg.get_from_id(),
                     viewtype: Viewtype::from_i32(msg.get_viewtype().to_i32().unwrap()).unwrap(),
@@ -570,13 +569,20 @@ async fn refresh_message_list(
                     from_color: from.get_color(),
                     state: msg.get_state().to_string(),
                     text: msg.get_text(),
+                    quote: None,
                     timestamp: get_timestamp(msg.get_sort_timestamp()),
                     is_info: msg.is_info(),
                     file: msg.get_file(&context).map(Into::into),
                     file_width: msg.get_width(),
                     file_height: msg.get_height(),
                     is_first,
-                });
+                };
+
+                if let Some(quote) = msg.quoted_message(&context).await? {
+                    inner_msg.quote = Some(load_quote(&context, &mut contacts, quote).await?);
+                }
+
+                chat_messages.push(ChatMessage::Message(inner_msg));
             }
             ChatItem::DayMarker(t) => {
                 chat_messages.push(ChatMessage::DayMarker(*t));
@@ -586,4 +592,39 @@ async fn refresh_message_list(
     }
 
     Ok((chat_id.to_u32(), range, chat_items, chat_messages))
+}
+
+async fn load_quote(
+    context: &Context,
+    contacts: &mut HashMap<u32, Contact>,
+    msg: message::Message,
+) -> Result<Box<InnerChatMessage>> {
+    let from = match contacts.get(&msg.get_from_id()) {
+        Some(contact) => contact,
+        None => {
+            let contact = Contact::load_from_db(&context, msg.get_from_id())
+                .await
+                .map_err(|err| anyhow!("failed to load contact: {}: {}", msg.get_from_id(), err))?;
+            contacts.insert(msg.get_from_id(), contact);
+            contacts.get(&msg.get_from_id()).unwrap()
+        }
+    };
+
+    Ok(Box::new(InnerChatMessage {
+        id: msg.get_id().to_u32(),
+        from_id: msg.get_from_id(),
+        viewtype: Viewtype::from_i32(msg.get_viewtype().to_i32().unwrap()).unwrap(),
+        from_first_name: from.get_first_name().to_string(),
+        from_profile_image: from.get_profile_image(&context).await.map(Into::into),
+        from_color: from.get_color(),
+        state: msg.get_state().to_string(),
+        text: msg.get_text(),
+        quote: None,
+        timestamp: get_timestamp(msg.get_sort_timestamp()),
+        is_info: msg.is_info(),
+        file: msg.get_file(&context).map(Into::into),
+        file_width: msg.get_width(),
+        file_height: msg.get_height(),
+        is_first: true,
+    }))
 }
