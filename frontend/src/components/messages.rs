@@ -6,6 +6,8 @@ use yewtil::{ptr::Irc, NeqAssign};
 use crate::components::list::List;
 use crate::components::message::Message;
 
+use log::{info};
+
 #[derive(Properties, Clone, PartialEq)]
 pub struct Props {
     pub messages: Irc<Vec<ChatMessage>>,
@@ -29,6 +31,7 @@ impl Component for Messages {
     }
 
     fn update(&mut self, _msg: Self::Message) -> ShouldRender {
+        info!("Update Message list{:?}", _msg);
         true
     }
 
@@ -41,8 +44,9 @@ impl Component for Messages {
             Rc::new(move |msg: ChatMessage| -> Html {
                 html! { <Message message=msg /> }
             });
-
-        html! {
+        info!("messages {:?}", self.props.messages.len());
+        if (self.props.messages.len() > 0) {
+          html! {
             <List<ChatMessage>
                class="message-list".to_string()
                list=self.props.messages.clone()
@@ -53,6 +57,13 @@ impl Component for Messages {
                render_element=render_element
                auto_scroll=true
                batch_size=30 />
+          }
+        } else {
+          html!{
+            <div>{ "No messages "}</div>
+          }
         }
+
+       
     }
 }

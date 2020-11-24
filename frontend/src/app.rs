@@ -94,20 +94,26 @@ impl App {
         } else {
             html! {}
         };
+        let select_account_callback = link.callback(move |account| {
+          info!("Account switched {}", account);
+          Msg::WsRequest(Request::SelectAccount { account })
+      });
+
         html! {
             <>
             { account_creation_modal }
               <div class="app">
                 <Sidebar
                   accounts=self.model.accounts.irc()
-                  selected_account=self.model.selected_account.irc()
+                  selected_account=self.model.selected_account.irc(),
+                  select_account_callback=select_account_callback
                   create_account_callback=create_account_callback
                 />
                 <Chatlist
                   selected_account=self.model.selected_account.irc()
                   selected_chat_id=self.model.selected_chat_id.irc()
                   selected_chat=self.model.selected_chat.irc()
-                  selected_chat_length =self.model.selected_chat_length.irc()
+                  selected_chat_length=self.model.selected_chat_length.irc()
                   select_chat_callback=select_chat_callback
                   chats=self.model.chats.irc()
                   chats_range=self.model.chats_range.irc()
@@ -215,11 +221,22 @@ impl Component for App {
                     Response::ChatList { range, len, chats } => {
                         self.model.chats_range.neq_assign(range);
                         self.model.chats_len.neq_assign(len);
+                        info!("ChatList {:?}", chats);
                         self.model.chats.neq_assign(chats);
-
                         return true;
                     }
+                    Response::Account { account } => {
+                      self.model.selected_account.neq_assign(Some(account));
+
+                      let message = Msg::WsRequest(Request::LoadChatList {
+                          start_index: 0,
+                          stop_index: 10,
+                      });
+                      self.link.send_message(message);
+                      return true;
+                    }
                     Response::RemoteUpdate { state } => {
+                        info!("RemoteUpdate {:?}", state);
                         self.model.accounts.neq_assign(state.shared.accounts);
                         self.model.errors.neq_assign(state.shared.errors);
                         self.model

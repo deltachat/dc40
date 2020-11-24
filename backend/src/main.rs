@@ -22,24 +22,30 @@ fn main() {
         let listener = try_socket.expect("Failed to bind");
         info!("Listening on: {}", addr);
 
-        let local_state = Arc::new(RwLock::new(LocalState::new().await.unwrap()));
-        info!("Restored local state");
-
-        while let Ok((stream, _)) = listener.accept().await {
-            let local_state = local_state.clone();
-            task::spawn(async move {
-                if let Err(err) = accept_connection(stream, local_state).await {
-                    if let Some(err) = err.downcast_ref::<Error>() {
-                        match err {
-                            Error::ConnectionClosed | Error::Protocol(_) | Error::Utf8 => {}
-                            err => warn!("Error processing connection: {:?}", err),
+        match LocalState::new().await {
+          Ok(created_state) => {
+            info!("configured");
+            info!("Restored local state");
+            let local_state = Arc::new(RwLock::new(created_state));
+            while let Ok((stream, _)) = listener.accept().await {
+                let local_state = local_state.clone();
+                task::spawn(async move {
+                    if let Err(err) = accept_connection(stream, local_state).await {
+                        if let Some(err) = err.downcast_ref::<Error>() {
+                            match err {
+                                Error::ConnectionClosed | Error::Protocol(_) | Error::Utf8 => {}
+                                err => warn!("Error processing connection: {:?}", err),
+                            }
+                        } else {
+                            warn!("Error processing connection: {:?}", err);
                         }
-                    } else {
-                        warn!("Error processing connection: {:?}", err);
                     }
-                }
-            });
+                });
+            }
+          },
+          Err(err) => info!("Local state could not be restored: {}", err)
         }
+
     });
 }
 
@@ -213,10 +219,20 @@ async fn accept_connection(stream: TcpStream, local_state: Arc<RwLock<LocalState
                         .as_ref()
                         .and_then(|a| ls.accounts.get(a))
                     {
-                        let (range, len, chats) =
-                            account.load_chat_list(start_index, stop_index).await?;
-                        ls.send(write.clone(), Response::ChatList { range, len, chats })
+                        info!("Loading chat list for account: {:?}", ls.selected_account);
+                        match account.load_chat_list(start_index, stop_index).await {
+                          Ok((range, len, chats)) => {
+                            ls.send(write.clone(), Response::ChatList { range, len, chats })
                             .await?;
+                          },
+                          Err(err) => {
+                            info!("Could not load chat list: {}", err);
+                            // send an empty chat list to be handled by frontend
+                            let chats = Vec::with_capacity(0);
+                            ls.send(write.clone(), Response::ChatList { range: (start_index, stop_index), len: 0, chats: chats })
+                            .await?;
+                          }
+                        }
                     }
                 }
                 Request::LoadMessageList {
@@ -251,10 +267,9 @@ async fn accept_connection(stream: TcpStream, local_state: Arc<RwLock<LocalState
                 }
                 Request::SelectAccount { account } => {
                     info!("selecting account {}", account);
-
                     let mut ls = local_state.write().await;
-                    ls.selected_account = Some(account);
-                    ls.send_update(write.clone()).await?;
+                    ls.selected_account = Some(account.clone());
+                    ls.send(write.clone(), Response::Account { account: account.to_string() }, ).await?;
                 }
                 Request::SendTextMessage { text } => {
                     let ls = local_state.read().await;
