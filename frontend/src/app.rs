@@ -107,12 +107,13 @@ impl App {
                   accounts=self.model.accounts.irc()
                   selected_account=self.model.selected_account.irc(),
                   select_account_callback=select_account_callback
+                  create_account_callback=create_account_callback
                 />
                 <Chatlist
                   selected_account=self.model.selected_account.irc()
                   selected_chat_id=self.model.selected_chat_id.irc()
                   selected_chat=self.model.selected_chat.irc()
-                  selected_chat_length =self.model.selected_chat_length.irc()
+                  selected_chat_length=self.model.selected_chat_length.irc()
                   select_chat_callback=select_chat_callback
                   chats=self.model.chats.irc()
                   chats_range=self.model.chats_range.irc()
