@@ -144,35 +144,35 @@ impl Account {
 
         let is_configured = self.context.get_config_int(Config::Configured).await;
         if is_configured == 1 {
-          info!("Account already configured");
-          return Ok(());
+            info!("Account already configured");
+            return Ok(());
         } else {
-          self.context
-            .configure()
-            .await
-            .map_err(|err| anyhow!("{:?}", err))?;
+            self.context
+                .configure()
+                .await
+                .map_err(|err| anyhow!("{:?}", err))?;
 
-          let mut events = self.events.clone();
-          while let Some(event) = events.next().await {
-              info!("configure event {:?}", event);
-              match event.typ {
-                  EventType::ConfigureProgress { progress, .. } => match progress {
-                      0 => {
-                          bail!("Failed to login");
-                      }
-                      1000 => {
-                          break;
-                      }
-                      _ => {}
-                  },
-                  EventType::ImapConnected(_) | EventType::SmtpConnected(_) => {
-                      break;
-                  }
-                  _ => {}
-              }
-          }
+            let mut events = self.events.clone();
+            while let Some(event) = events.next().await {
+                info!("configure event {:?}", event);
+                match event.typ {
+                    EventType::ConfigureProgress { progress, .. } => match progress {
+                        0 => {
+                            bail!("Failed to login");
+                        }
+                        1000 => {
+                            break;
+                        }
+                        _ => {}
+                    },
+                    EventType::ImapConnected(_) | EventType::SmtpConnected(_) => {
+                        break;
+                    }
+                    _ => {}
+                }
+            }
 
-          Ok(())
+            Ok(())
         }
     }
 
@@ -225,7 +225,19 @@ impl Account {
         if let Some(chat_id) = chat_id {
             info!("loading {:?} msgs", chat_id);
 
-            refresh_message_list(self.context.clone(), chat_id, range).await
+            let (chat_id, range, chat_items, chat_messages) =
+                refresh_message_list(self.context.clone(), chat_id, range).await?;
+
+            let msg_ids = chat_messages
+                .iter()
+                .filter_map(|item| match item {
+                    ChatMessage::Message(inner) => Some(message::MsgId::new(inner.id)),
+                    ChatMessage::DayMarker(..) => None,
+                })
+                .collect();
+            message::markseen_msgs(&self.context, msg_ids).await;
+
+            Ok((chat_id, range, chat_items, chat_messages))
         } else {
             bail!("failed to load message list, no chat selected");
         }
@@ -290,8 +302,10 @@ impl Account {
         info!("Subscribed");
         let mut events = self.events.clone();
         let state = self.state.clone();
+        let ctx = self.context.clone();
 
         task::spawn(async move {
+            let ctx = &ctx;
             // subscribe to events
             while let Some(event) = events.next().await {
                 let res = match event.typ {
@@ -354,24 +368,37 @@ impl Account {
                             .send_event(writer.clone(), event.id, shared::Event::Connected)
                             .await
                     }
+                    EventType::IncomingMsg { chat_id, msg_id } => {
+                        let load = || async {
+                            let msg = message::Message::load_from_db(ctx, msg_id).await.map_err(
+                                |err| anyhow!("failed to load msg: {}: {}", msg_id, err),
+                            )?;
+                            let chat = Chat::load_from_db(ctx, chat_id)
+                                .await
+                                .map_err(|err| anyhow!("failed to load chat: {:?}", err))?;
+
+                            local_state
+                                .read()
+                                .await
+                                .send_event(
+                                    writer.clone(),
+                                    event.id,
+                                    shared::Event::MessageIncoming {
+                                        chat_id: chat_id.to_u32(),
+                                        title: chat.get_name().to_string(),
+                                        body: msg.get_text().unwrap_or_default(),
+                                    },
+                                )
+                                .await
+                        };
+                        load().await
+                    }
                     EventType::MsgDelivered { chat_id, .. }
                     | EventType::MsgFailed { chat_id, .. }
-                    | EventType::IncomingMsg { chat_id, .. } => {
-                        local_state
-                            .read()
-                            .await
-                            .send_event(
-                                writer.clone(),
-                                event.id,
-                                shared::Event::MessageIncoming {
-                                    chat_id: chat_id.to_u32(),
-                                },
-                            )
-                            .await
-                    }
-                    EventType::MsgsChanged { chat_id, .. }
+                    | EventType::MsgsChanged { chat_id, .. }
                     | EventType::MsgRead { chat_id, .. }
-                    | EventType::ChatModified(chat_id) => {
+                    | EventType::ChatModified(chat_id)
+                    | EventType::MsgsNoticed(chat_id) => {
                         local_state
                             .read()
                             .await

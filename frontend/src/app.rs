@@ -1,6 +1,7 @@
 use anyhow::Error;
 use log::*;
 use std::collections::HashMap;
+use wasm_bindgen::JsCast;
 use yew::format::Bincode;
 use yew::services::websocket::{WebSocketService, WebSocketStatus, WebSocketTask};
 use yew::{html, Component, ComponentLink, Html, ShouldRender};
@@ -95,9 +96,9 @@ impl App {
             html! {}
         };
         let select_account_callback = link.callback(move |account| {
-          info!("Account switched {}", account);
-          Msg::WsRequest(Request::SelectAccount { account })
-      });
+            info!("Account switched {}", account);
+            Msg::WsRequest(Request::SelectAccount { account })
+        });
 
         html! {
             <>
@@ -226,14 +227,14 @@ impl Component for App {
                         return true;
                     }
                     Response::Account { account } => {
-                      self.model.selected_account.neq_assign(Some(account));
+                        self.model.selected_account.neq_assign(Some(account));
 
-                      let message = Msg::WsRequest(Request::LoadChatList {
-                          start_index: 0,
-                          stop_index: 10,
-                      });
-                      self.link.send_message(message);
-                      return true;
+                        let message = Msg::WsRequest(Request::LoadChatList {
+                            start_index: 0,
+                            stop_index: 10,
+                        });
+                        self.link.send_message(message);
+                        return true;
                     }
                     Response::RemoteUpdate { state } => {
                         info!("RemoteUpdate {:?}", state);
@@ -270,8 +271,22 @@ impl Component for App {
 
                                 self.link.send_message_batch(messages);
                             }
-                            Event::MessageIncoming { chat_id } => {
+                            Event::MessageIncoming {
+                                chat_id,
+                                title,
+                                body,
+                            } => {
                                 info!("incoming {}", chat_id);
+                                let mut opts = web_sys::NotificationOptions::new();
+                                opts.body(&body);
+                                let notification =
+                                    web_sys::Notification::new_with_options(&title, &opts).unwrap();
+                                let onclick = wasm_bindgen::closure::Closure::wrap(Box::new(|| {
+                                    info!("clicked notification");
+                                })
+                                    as Box<dyn Fn()>);
+                                notification.set_onclick(Some(onclick.as_ref().unchecked_ref()));
+
                                 // refresh chat list
                                 let mut messages = vec![Msg::WsRequest(Request::LoadChatList {
                                     start_index: self.model.chats_range.0,

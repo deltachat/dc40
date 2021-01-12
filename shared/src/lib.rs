@@ -22,7 +22,7 @@ pub enum Response {
         chats: Vec<ChatState>,
     },
     Account {
-      account: String,
+        account: String,
     },
     Event {
         account: u32,
@@ -35,8 +35,14 @@ pub enum Event {
     Configure(Progress),
     Imex(Progress),
     Connected,
-    MessagesChanged { chat_id: u32 },
-    MessageIncoming { chat_id: u32 },
+    MessagesChanged {
+        chat_id: u32,
+    },
+    MessageIncoming {
+        chat_id: u32,
+        title: String,
+        body: String,
+    },
     Log(Log),
 }
 
