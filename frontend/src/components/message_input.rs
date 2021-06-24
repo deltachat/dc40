@@ -50,7 +50,7 @@ impl Component for MessageInput {
                     input.set_value("");
                     self.has_text = false;
                 }
-                false
+                true
             }
             Msg::OnChange(change) => {
                 info!("chat message: {:?}", change);
