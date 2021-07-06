@@ -3,7 +3,7 @@
   flex-direction: column;
 
   h1 {
-    color: @darkerBlue;
+    color: $darkerBlue;
   }
 
   .form-group {
@@ -13,13 +13,13 @@
     label {
       font-weight: 400;
       font-size: 16px;
-      color: @gray;
+      color: $gray;
       margin-bottom: 5px;
     }
     
     input {
       outline: none;
-      border: 1px solid @gray;
+      border: 1px solid $gray;
       border-radius: 5px;
       padding: 5px 10px;
     }
@@ -28,7 +28,7 @@
   .invalid-feedback {
     min-height: 28px;
     height: 28px;
-    color: @red;
+    color: $red;
     margin-bottom: 20px;
   }
 
@@ -36,7 +36,7 @@
     outline: none;
     border: none;
     color: #FFF;
-    background-color: @darkBlue;
+    background-color: $darkBlue;
     font-weight: 300;
     font-size: 18px;
     border-radius: 5px;
@@ -45,7 +45,7 @@
 
     &:hover {
       cursor: pointer;
-      background-color: @hoverBlue;
+      background-color: $hoverBlue;
     }
   }
 }
