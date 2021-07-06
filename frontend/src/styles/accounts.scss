@@ -1,7 +1,7 @@
 .account-list {
   flex: 0 0 68px;
   flex-direction: column;
-  background-color: @darkerBlue;
+  background-color: $darkerBlue;
   display: flex;
   align-items: center;
   height: 100%;
@@ -21,7 +21,7 @@
     
     &:hover {
       cursor: pointer;
-      background-color: @hoverBlue;
+      background-color: $hoverBlue;
     }
 
     &.active {

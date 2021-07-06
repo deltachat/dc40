@@ -8,7 +8,7 @@
   .day-marker {
     flex: 1;
     height: 10px;
-    color: @darkerBlue;
+    color: $darkerBlue;
     text-align: center;
     align-items: center;
     display: flex;
@@ -18,7 +18,7 @@
       content: '';
       flex: 1;
       opacity: 0.6;
-      border-bottom: 1px solid @gray;
+      border-bottom: 1px solid $gray;
     }
 
     &::before {
@@ -133,13 +133,13 @@
       background-color: #afb6c1;
       
       &.alert {
-        background-color: @red;
+        background-color: $red;
       }
     }
 
     .message-quote {
       margin-left: 3px;
-      border-left: 4px solid @gray;
+      border-left: 4px solid $gray;
       padding: 7px 10px;
       background: rgba(0, 0, 0, 0.1);
 
@@ -205,7 +205,7 @@
 
           img {
             object-fit: contain;
-            border: 1px solid @gray;
+            border: 1px solid $gray;
             border-radius: 10px;
             max-width: 100%;
           }
@@ -219,7 +219,7 @@
    
 .chat-input {
   flex: 0 0 40px;
-  border: 1px solid @gray;
+  border: 1px solid $gray;
   minHeight: 30px;
   margin: 10px;
   padding: 5px 5px 5px 15px;
@@ -242,11 +242,11 @@
     justify-content: center;
 
     .icon {
-      background-color: @gray;
+      background-color: $gray;
     }
 
     &.active {
-      background-color: @darkBlue;
+      background-color: $darkBlue;
 
       &:hover {
         cursor: pointer;
