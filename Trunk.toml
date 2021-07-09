@@ -4,4 +4,8 @@ open = true
 
 [build]
 dist = "build"
-target = "frontend/index.html"
+
+## use this line on linux
+#target = "frontend/index.html"
+# use this line on windows
+target = "frontend\\index.html"
