@@ -1,5 +1,0 @@
-[serve]
-port = 3000
-
-[build]
-dist = "C:\\repo\\dc40-mine\\build"
