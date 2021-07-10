@@ -1,3 +1,8 @@
+#![cfg_attr(
+    all(not(debug_assertions), target_os = "windows"),
+    windows_subsystem = "windows"
+)]
+
 use anyhow::{ensure, Result};
 use async_std::net::{TcpListener, TcpStream};
 use async_std::sync::{Arc, RwLock};
@@ -14,38 +19,46 @@ use dc40_backend::{account::*, state::*};
 fn main() {
     femme::start(log::LevelFilter::Info).unwrap();
 
-    let addr = "127.0.0.1:8080";
+    std::thread::spawn(|| {
+        let addr = "127.0.0.1:8080";
 
-    task::block_on(async move {
-        // Create the event loop and TCP listener we'll accept connections on.
-        let try_socket = TcpListener::bind(&addr).await;
-        let listener = try_socket.expect("Failed to bind");
-        info!("Listening on: {}", addr);
+        task::block_on(async move {
+            // Create the event loop and TCP listener we'll accept connections on.
+            let try_socket = TcpListener::bind(&addr).await;
+            let listener = try_socket.expect("Failed to bind");
+            info!("Listening on: {}", addr);
 
-        match LocalState::new().await {
-            Ok(created_state) => {
-                info!("configured");
-                info!("Restored local state");
-                let local_state = Arc::new(RwLock::new(created_state));
-                while let Ok((stream, _)) = listener.accept().await {
-                    let local_state = local_state.clone();
-                    task::spawn(async move {
-                        if let Err(err) = accept_connection(stream, local_state).await {
-                            if let Some(err) = err.downcast_ref::<Error>() {
-                                match err {
-                                    Error::ConnectionClosed | Error::Protocol(_) | Error::Utf8 => {}
-                                    err => warn!("Error processing connection: {:?}", err),
+            match LocalState::new().await {
+                Ok(created_state) => {
+                    info!("configured");
+                    info!("Restored local state");
+                    let local_state = Arc::new(RwLock::new(created_state));
+                    while let Ok((stream, _)) = listener.accept().await {
+                        let local_state = local_state.clone();
+                        task::spawn(async move {
+                            if let Err(err) = accept_connection(stream, local_state).await {
+                                if let Some(err) = err.downcast_ref::<Error>() {
+                                    match err {
+                                        Error::ConnectionClosed
+                                        | Error::Protocol(_)
+                                        | Error::Utf8 => {}
+                                        err => warn!("Error processing connection: {:?}", err),
+                                    }
+                                } else {
+                                    warn!("Error processing connection: {:?}", err);
                                 }
-                            } else {
-                                warn!("Error processing connection: {:?}", err);
                             }
-                        }
-                    });
+                        });
+                    }
                 }
+                Err(err) => info!("Local state could not be restored: {}", err),
             }
-            Err(err) => info!("Local state could not be restored: {}", err),
-        }
+        });
     });
+
+    tauri::Builder::default()
+        .run(tauri::generate_context!())
+        .expect("error while running tauri application");
 }
 
 async fn accept_connection(stream: TcpStream, local_state: Arc<RwLock<LocalState>>) -> Result<()> {

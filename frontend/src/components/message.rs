@@ -56,9 +56,8 @@ impl Component for Message {
                         html! {
                             <img
                              class="image-icon"
-                             src={format!("dc://{}", profile_image.to_string_lossy())}
-                             alt="chat avatar"
-                             />
+                             src={format!("asset://{}", profile_image.to_string_lossy())}
+                             alt="chat avatar"                             />
                         }
                     } else {
                         let image_style = format!("background-color: #{:06X}", from_color);
@@ -79,7 +78,7 @@ impl Component for Message {
                             html! {
                                 <div class="message-image">
                                     <img
-                                    src={format!("dc://{}", file.display())}
+                                    src={format!("asset://{}", file.display())}
                                 alt="image"
                                     height={(file_height).min(400)}
                                 width="auto" />
