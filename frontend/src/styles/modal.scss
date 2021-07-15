@@ -7,7 +7,7 @@
   left: 0;
   z-index: 999;
   transition: all 0.3s;
-  
+
   &:target {
     visibility: visible;
     opacity: 1;
@@ -26,16 +26,15 @@
 }
 
 .modal-close {
-  color: #aaa;
-  line-height: 50px;
+  background: black;
+  cursor: pointer;
   font-size: 80%;
   position: absolute;
   right: 0;
   text-align: center;
   top: 0;
-  width: 70px;
   text-decoration: none;
-
+  padding: 1em;
   &:hover {
     color: black;
   }
