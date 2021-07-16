@@ -105,9 +105,8 @@ impl Component for Modal {
                 <div class="form-group">
                   <button
                     type="button"
-                    class="modal-close"
+                    class="modal-close icon close small"
                     onclick=cancel>
-                    {"Cancel"}
                   </button>
                   <button
                     class="submit-button"
