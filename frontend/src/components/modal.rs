@@ -12,10 +12,27 @@ pub struct Props {
     pub cancel_callback: Callback<()>,
 }
 
+#[derive(PartialEq)]
+enum CreateType {
+    Login,
+    Import,
+}
+
+impl CreateType {
+    fn next(&mut self) {
+        match &self {
+            CreateType::Login => *self = CreateType::Import,
+            CreateType::Import => *self = CreateType::Login,
+        }
+    }
+}
+
 pub struct Modal {
     props: Props,
     link: ComponentLink<Self>,
-    form: Form<Login>,
+    login_form: Form<Login>,
+    import_form: Form<ImportForm>,
+    create_type: CreateType,
 }
 
 #[derive(yew_form_derive::Model, Validate, PartialEq, Clone, Debug)]
@@ -24,6 +41,13 @@ struct Login {
     email: String,
     #[validate(length(min = 1, message = "Password is required"))]
     password: String,
+}
+
+#[derive(yew_form_derive::Model, Validate, PartialEq, Clone, Debug, Default)]
+struct ImportForm {
+    #[validate(email(message = "Must be a valid email"))]
+    email: String,
+    path: String,
 }
 
 impl Default for Login {
@@ -39,6 +63,7 @@ impl Default for Login {
 pub enum Msg {
     FormUpdate,
     Submit,
+    Switch,
 }
 
 impl Component for Modal {
@@ -49,7 +74,9 @@ impl Component for Modal {
         Modal {
             props,
             link,
-            form: Form::new(Login::default()),
+            login_form: Form::new(Login::default()),
+            import_form: Form::new(ImportForm::default()),
+            create_type: CreateType::Login,
         }
     }
 
@@ -57,8 +84,21 @@ impl Component for Modal {
         match msg {
             Msg::FormUpdate => true,
             Msg::Submit => {
-                let valid = self.form.validate();
-                info!("submitted  (valid: {})", valid);
+                match self.create_type {
+                    CreateType::Login => {
+                        let valid = self.login_form.validate();
+                        info!("submitted  (valid: {})", valid);
+                    }
+                    CreateType::Import => {
+                        let valid = self.import_form.validate();
+                        info!("submitted  (valid: {})", valid);
+                        info!("path-value: {}", self.import_form.field_value("path"))
+                    }
+                }
+                true
+            }
+            Msg::Switch => {
+                self.create_type.next();
                 true
             }
         }
@@ -74,50 +114,96 @@ impl Component for Modal {
             e.prevent_default();
             Msg::Submit
         });
+        let switch = self.link.callback(|e: MouseEvent| Msg::Switch);
         let cancel: Callback<_> = (move |_| cb.emit(())).into();
 
+        let input_form = move || -> Html {
+            if self.create_type == CreateType::Login {
+                html! {
+                    <form>
+                        <div class="form-group">
+                        <label for="email">{"Email"}</label>
+                        <Field<Login>
+                            form=&self.login_form
+                            field_name="email"
+                            oninput=self.link.callback(|_| Msg::FormUpdate) />
+                        <div class="invalid-feedback">
+                            {&self.login_form.field_message("email")}
+                        </div>
+
+                        <label for="password">{"Password"}</label>
+                        <Field<Login>
+                            form=&self.login_form
+                            field_name="password"
+                            input_type="password"
+                            oninput=self.link.callback(|_| Msg::FormUpdate) />
+                        <div class="invalid-feedback">
+                            {&self.login_form.field_message("password")}
+                        </div>
+                        </div>
+
+                        <div class="form-group">
+                            <button
+                                class="submit-button"
+                                type="button"
+                                onclick=submit>
+                                {"Login"}
+                            </button>
+                        </div>
+                    </form>
+                }
+            } else {
+                html! {
+                    <form>
+                        <div class="form-group">
+                            <label for="email">{"Email"}</label>
+                            <Field<ImportForm>
+                                form=&self.import_form
+                                field_name="email"
+                                oninput=self.link.callback(|_| Msg::FormUpdate) />
+                            <div class="invalid-feedback">
+                                {&self.import_form.field_message("email")}
+                            </div>
+
+                            <label for="path">{"Pfad"}</label>
+                            <Field<ImportForm>
+                                form=&self.import_form
+                                field_name="path"
+                                input_type="file"
+                                oninput=self.link.callback(|_| Msg::FormUpdate) />
+                        </div>
+
+                        <div class="form-group">
+                            <button
+                                class="submit-button"
+                                type="button"
+                                onclick=submit>
+                                {"Import"}
+                            </button>
+                        </div>
+                    </form>
+                }
+            }
+        };
+
         html! {
-          <div class="modal-window">
-            <div class="account-create">
-              <h1>{"Login"}</h1>
-              <form>
-                <div class="form-group">
-                  <label for="email">{"Email"}</label>
-                  <Field<Login>
-                    form=&self.form
-                    field_name="email"
-                    oninput=self.link.callback(|_| Msg::FormUpdate) />
-                  <div class="invalid-feedback">
-                    {&self.form.field_message("email")}
-                  </div>
-
-                  <label for="password">{"Password"}</label>
-                  <Field<Login>
-                    form=&self.form
-                    field_name="password"
-                    input_type="password"
-                    oninput=self.link.callback(|_| Msg::FormUpdate) />
-                  <div class="invalid-feedback">
-                    {&self.form.field_message("password")}
-                  </div>
+            <div class="modal-window">
+                <div class="account-create">
+                // select login-type
+                <div class="select-type">
+                    <h1 onclick=switch.clone()>{"Login"}</h1>
+                    <h1 class="spacer">{"|"}</h1>
+                    <h1 onclick=switch>{"Import"}</h1>
                 </div>
 
-                <div class="form-group">
-                  <button
-                    type="button"
-                    class="modal-close icon close small"
-                    onclick=cancel>
-                  </button>
-                  <button
-                    class="submit-button"
-                    type="button"
-                    onclick=submit>
-                    {"Login"}
-                  </button>
+                {input_form()}
+                <button
+                        type="button"
+                        class="modal-close icon close small"
+                        onclick=cancel>
+                    </button>
                 </div>
-              </form>
             </div>
-          </div>
         }
     }
 }
