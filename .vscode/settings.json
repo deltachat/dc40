@@ -1,0 +1,8 @@
+{
+    "rust-analyzer.cargo.loadOutDirsFromCheck": true,
+    "rust-analyzer.procMacro.enable": true,
+    "rust-analyzer.diagnostics.disabled": [
+        "unresolved-macro-call"
+    ],
+    "editor.detectIndentation": true,
+}

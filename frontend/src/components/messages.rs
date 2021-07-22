@@ -45,7 +45,7 @@ impl Component for Messages {
                 html! { <Message message=msg /> }
             });
         info!("messages {:?}", self.props.messages.len());
-        if (self.props.messages.len() > 0) {
+        if self.props.messages.len() > 0 {
             html! {
               <List<ChatMessage>
                  class="message-list".to_string()

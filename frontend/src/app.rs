@@ -100,6 +100,11 @@ impl App {
             Msg::WsRequest(Request::SelectAccount { account })
         });
 
+        let _import_account_callback = link.callback(move |(path, email)| {
+            info!("Loading account-data from {}", path);
+            Msg::WsRequest(Request::Import { path, email })
+        });
+
         html! {
             <>
             { account_creation_modal }
@@ -304,7 +309,7 @@ impl Component for App {
                                 self.link.send_message_batch(messages);
                             }
                             Event::Log(log) => match log {
-                                shared::Log::Info(msg) => {
+                                shared::Log::Info(_msg) => {
                                     // info!("[{}]: {:?}", account, msg);
                                 }
                                 shared::Log::Warning(msg) => {
