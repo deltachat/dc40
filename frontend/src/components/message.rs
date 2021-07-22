@@ -1,5 +1,5 @@
 use chrono::prelude::*;
-use log::*;
+
 use shared::*;
 use yew::{html, virtual_dom::VList, Component, ComponentLink, Html, Properties, ShouldRender};
 use yewtil::NeqAssign;

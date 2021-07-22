@@ -1,11 +1,9 @@
-use std::collections::HashMap;
-
 use log::*;
-use shared::{ChatState, SharedAccountState};
-use validator::{Validate, ValidationError};
+
+use validator::Validate;
 use yew::{html, Callback, Component, ComponentLink, Html, MouseEvent, Properties, ShouldRender};
 use yew_form::{Field, Form};
-use yewtil::{ptr::Irc, NeqAssign};
+use yewtil::NeqAssign;
 
 #[derive(Properties, Clone, PartialEq)]
 pub struct Props {
@@ -114,7 +112,7 @@ impl Component for Modal {
             e.prevent_default();
             Msg::Submit
         });
-        let switch = self.link.callback(|e: MouseEvent| Msg::Switch);
+        let switch = self.link.callback(|_e: MouseEvent| Msg::Switch);
         let cancel: Callback<_> = (move |_| cb.emit(())).into();
 
         let input_form = move || -> Html {
