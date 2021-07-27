@@ -95,11 +95,16 @@ impl App {
         let submit_account_create_callback =
             link.callback(move |(email, password)| Msg::AccountCreation(email, password));
 
+        let import_account_callback =
+            link.callback(move |data| Msg::WsRequest(Request::Import { data }));
+
         let account_creation_modal = if self.model.show_account_creation {
             html! {
                 <Modal
                  submit_callback=submit_account_create_callback
-                 cancel_callback=cancel_account_create_callback />
+                 cancel_callback=cancel_account_create_callback
+                 import_callback=import_account_callback
+                 />
             }
         } else {
             html! {}
@@ -320,7 +325,7 @@ impl Component for App {
                                 self.link.send_message_batch(messages);
                             }
                             Event::Log(log) => match log {
-                                shared::Log::Info(msg) => {
+                                shared::Log::Info(_msg) => {
                                     // info!("[{}]: {:?}", account, msg);
                                 }
                                 shared::Log::Warning(msg) => {

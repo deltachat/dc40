@@ -151,7 +151,7 @@ pub enum Request {
         password: String,
     },
     Import {
-        path: String,
+        data: Vec<u8>,
     },
     SelectChat {
         account: u32,

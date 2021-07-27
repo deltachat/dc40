@@ -9,7 +9,8 @@ use async_std::sync::{Arc, RwLock};
 use async_std::task;
 use async_tungstenite::tungstenite::{Error, Message};
 use futures::StreamExt;
-use log::{info, warn};
+use log::{error, info, warn};
+use num_traits::FromPrimitive;
 use shared::*;
 
 use dc40_backend::state::*;
@@ -92,7 +93,17 @@ async fn accept_connection(stream: TcpStream, local_state: LocalState) -> Result
             continue;
         }
         let parsed: std::result::Result<Request, _> = bincode::deserialize(&msg.into_data());
-        info!("request: {:?}", &parsed);
+        
+        match &parsed {
+            Ok(req) => {
+                match req{
+                    Request::Import { email, .. } => info!("request: Import {{email: {}}}", email),
+                    req => info!("request: {:?}", req )
+                }
+            },
+            Err(_) => error!("couldn't deserialize request"),
+        }
+
         match parsed {
             Ok(request) => {
                 if let Err(err) = process_request(request, write.clone(), &local_state).await {
@@ -126,10 +137,10 @@ where
                 .send_account_details(&ctx, id, write.clone())
                 .await?;
         }
-        Request::Import { path } => {
+        Request::Import { data } => {
             let (id, ctx) = local_state.add_account().await?;
 
-            local_state.import(&ctx, id, &path).await?;
+            //local_state.import(&ctx, id, &path).await?;
 
             local_state
                 .send_account_details(&ctx, id, write.clone())

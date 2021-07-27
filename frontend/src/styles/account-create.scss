@@ -50,3 +50,17 @@
     }
   }
 }
+
+.select-type {
+  display: flex;
+  justify-content: center;
+  padding: 1em;
+
+  &>h1 {
+    cursor: pointer;
+  }
+  &>.spacer{
+    margin-right: 0.5em;
+    margin-left: 0.5em;
+  }
+}
