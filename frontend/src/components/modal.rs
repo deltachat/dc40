@@ -1,13 +1,17 @@
+use gloo::file::{File, callbacks::FileReader};
 use log::*;
-
 use validator::Validate;
-use yew::{html, Callback, Component, ComponentLink, Html, MouseEvent, Properties, ShouldRender};
+use web_sys::HtmlInputElement;
+use yew::{
+    html, Callback, Component, ComponentLink, Html, MouseEvent, NodeRef, Properties, ShouldRender,
+};
 use yew_form::{Field, Form};
 use yewtil::NeqAssign;
 
 #[derive(Properties, Clone, PartialEq)]
 pub struct Props {
     pub cancel_callback: Callback<()>,
+    pub import_callback: Callback<(String, Vec<u8>)>,
 }
 
 #[derive(PartialEq)]
@@ -31,6 +35,7 @@ pub struct Modal {
     login_form: Form<Login>,
     import_form: Form<ImportForm>,
     create_type: CreateType,
+    reader: Option<FileReader>
 }
 
 #[derive(yew_form_derive::Model, Validate, PartialEq, Clone, Debug)]
@@ -60,8 +65,10 @@ impl Default for Login {
 #[derive(Debug)]
 pub enum Msg {
     FormUpdate,
-    Submit,
+    Login,
+    Import(File),
     Switch,
+    LoadedBackup(Vec<u8>),
 }
 
 impl Component for Modal {
@@ -75,28 +82,40 @@ impl Component for Modal {
             login_form: Form::new(Login::default()),
             import_form: Form::new(ImportForm::default()),
             create_type: CreateType::Login,
+            // this field is only used to not drop the reader
+            reader: None
         }
     }
 
     fn update(&mut self, msg: Self::Message) -> ShouldRender {
         match msg {
             Msg::FormUpdate => true,
-            Msg::Submit => {
-                match self.create_type {
-                    CreateType::Login => {
-                        let valid = self.login_form.validate();
-                        info!("submitted  (valid: {})", valid);
-                    }
-                    CreateType::Import => {
-                        let valid = self.import_form.validate();
-                        info!("submitted  (valid: {})", valid);
-                        info!("path-value: {}", self.import_form.field_value("path"))
-                    }
-                }
-                true
-            }
             Msg::Switch => {
                 self.create_type.next();
+                true
+            }
+            Msg::Login => {
+                let valid = self.login_form.validate();
+                info!("submitted  (valid: {})", valid);
+                true
+            }
+            Msg::Import(file) => {
+                let valid = self.import_form.validate();
+                info!("form_valid:{}", valid);
+                info!("loading file: {:?}", file.name());
+                let link = self.link.clone();
+                let task = gloo::file::callbacks::read_as_bytes(&file, move |res| {
+                    link.send_message(Msg::LoadedBackup(res.expect("failed to read file")))
+                });
+                self.reader = Some(task);
+                true
+            }
+            Msg::LoadedBackup(data) => {
+                info!("transfering backup");
+                self.create_type.next();
+                self.props
+                    .import_callback
+                    .emit((self.import_form.field_value("email"), data));
                 true
             }
         }
@@ -108,10 +127,20 @@ impl Component for Modal {
 
     fn view(&self) -> Html {
         let cb = self.props.cancel_callback.clone();
-        let submit = self.link.callback(|e: MouseEvent| {
+        let login = self.link.callback(|e: MouseEvent| {
             e.prevent_default();
-            Msg::Submit
+            Msg::Login
         });
+
+        let node_ref = NodeRef::default();
+        let node_ref_clone = node_ref.clone();
+        let import = self.link.callback(move |e: MouseEvent| {
+            e.prevent_default();
+            let input = node_ref_clone.cast::<HtmlInputElement>().unwrap();
+            let file = input.files().unwrap().get(0).unwrap();
+            Msg::Import(file.into())
+        });
+
         let switch = self.link.callback(|_e: MouseEvent| Msg::Switch);
         let cancel: Callback<_> = (move |_| cb.emit(())).into();
 
@@ -144,7 +173,7 @@ impl Component for Modal {
                             <button
                                 class="submit-button"
                                 type="button"
-                                onclick=submit>
+                                onclick=login>
                                 {"Login"}
                             </button>
                         </div>
@@ -164,10 +193,9 @@ impl Component for Modal {
                             </div>
 
                             <label for="path">{"Pfad"}</label>
-                            <Field<ImportForm>
-                                form=&self.import_form
-                                field_name="path"
-                                input_type="file"
+                            <input
+                                type="file"
+                                ref={node_ref}
                                 oninput=self.link.callback(|_| Msg::FormUpdate) />
                         </div>
 
@@ -175,7 +203,7 @@ impl Component for Modal {
                             <button
                                 class="submit-button"
                                 type="button"
-                                onclick=submit>
+                                onclick=import>
                                 {"Import"}
                             </button>
                         </div>

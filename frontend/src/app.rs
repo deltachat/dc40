@@ -88,9 +88,12 @@ impl App {
         let create_account_callback = link.callback(move |_| Msg::ShowAccountCreation);
         let cancel_account_create_callback = link.callback(move |_| Msg::CancelAccountCreation);
 
+        let import_account_callback =
+            link.callback(move |(email, data)| Msg::WsRequest(Request::Import { email, data }));
+
         let account_creation_modal = if self.model.show_account_creation {
             html! {
-                <Modal cancel_callback=cancel_account_create_callback />
+                <Modal cancel_callback=cancel_account_create_callback import_callback=import_account_callback />
             }
         } else {
             html! {}
@@ -98,11 +101,6 @@ impl App {
         let select_account_callback = link.callback(move |account| {
             info!("Account switched {}", account);
             Msg::WsRequest(Request::SelectAccount { account })
-        });
-
-        let _import_account_callback = link.callback(move |(path, email)| {
-            info!("Loading account-data from {}", path);
-            Msg::WsRequest(Request::Import { path, email })
         });
 
         html! {
