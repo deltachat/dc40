@@ -1441,7 +1441,6 @@ dependencies = [
  "linkify",
  "log",
  "serde",
- "stdweb",
  "strum 0.20.0",
  "strum_macros 0.20.1",
  "validator",
@@ -4785,8 +4784,6 @@ checksum = "d022496b16281348b52d0e30ae99e01a73d737b2f45d38fed4edf79f9325a1d5"
 dependencies = [
  "discard",
  "rustc_version 0.2.3",
- "serde",
- "serde_json",
  "stdweb-derive",
  "stdweb-internal-macros",
  "stdweb-internal-runtime",
