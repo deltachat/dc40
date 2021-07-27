@@ -10,7 +10,7 @@ use async_std::task;
 use async_tungstenite::tungstenite::Error;
 use deltachat::{chat::ChatId, message::MsgId};
 use futures::StreamExt;
-use log::{info, warn};
+use log::{error, info, warn};
 use num_traits::FromPrimitive;
 use shared::*;
 
@@ -99,7 +99,17 @@ async fn accept_connection(stream: TcpStream, local_state: Arc<RwLock<LocalState
             continue;
         }
         let parsed: std::result::Result<Request, _> = bincode::deserialize(&msg.into_data());
-        info!("request: {:?}", &parsed);
+        
+        match &parsed {
+            Ok(req) => {
+                match req{
+                    Request::Import { email, .. } => info!("request: Import {{email: {}}}", email),
+                    req => info!("request: {:?}", req )
+                }
+            },
+            Err(_) => error!("couldn't deserialize request"),
+        }
+
         match parsed {
             Ok(request) => match request {
                 Request::Login {

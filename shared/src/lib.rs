@@ -144,7 +144,7 @@ pub struct SharedAccountState {
     pub email: String,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub enum Request {
     Login {
         email: String,
@@ -183,16 +183,6 @@ pub enum Request {
         id: u32,
     },
     MaybeNetwork,
-}
-
-
-impl std::fmt::Debug for Request {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Request::Import { email, .. } => write!(f, "Import-request: {{ email: {:?}}}", email),
-            req => {write!(f, "{:?}", req)}
-        }
-    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, FromPrimitive, ToPrimitive)]
