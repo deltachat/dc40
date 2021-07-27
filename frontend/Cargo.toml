@@ -25,6 +25,8 @@ yew_form = { git = "https://github.com/dignifiedquire/yew_form", branch = "fix-s
 yew_form_derive = { git = "https://github.com/dignifiedquire/yew_form", branch = "fix-syn"}
 validator = "0.12"
 validator_derive = "0.12"
+gloo = "*"
+stdweb = "*"
 
 [dependencies.web-sys]
 version = "0.3.4"
@@ -36,6 +38,8 @@ features = [
   'HtmlInputElement',
   'Notification',
   'NotificationOptions',
+  'File',
+  'FileList'
 ]
 
 [dev-dependencies]

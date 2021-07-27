@@ -162,7 +162,7 @@ async fn accept_connection(stream: TcpStream, local_state: Arc<RwLock<LocalState
                         }
                     }
                 }
-                Request::Import { path, email } => {
+                Request::Import { data: _, email } => {
                     ensure!(!email.is_empty(), "Missing email");
 
                     {
@@ -173,7 +173,7 @@ async fn accept_connection(stream: TcpStream, local_state: Arc<RwLock<LocalState
                     };
 
                     {
-                        let res = local_state
+                        /* let res = local_state
                             .read()
                             .await
                             .accounts
@@ -185,7 +185,7 @@ async fn accept_connection(stream: TcpStream, local_state: Arc<RwLock<LocalState
                             let mut ls = local_state.write().await;
                             ls.errors.push(err);
                             ls.accounts.remove(&email);
-                        }
+                        } */
                     }
 
                     {
