@@ -1,13 +1,14 @@
 # dc40
 
-## Running
+## Development Dependencies
+
+- [`rustup`](https://rustup.rs/)
+- [`trunk`](https://trunkrs.dev/)
+- [`cargo-tauri`](https://tauri.studio/)
+
+## Development Running
 
 
 ```sh
-$ npm i
-$ npm start
-```
-
-```sh
-$ cargo run -p dc40-backend --release
+$ cargo tauri dev
 ```

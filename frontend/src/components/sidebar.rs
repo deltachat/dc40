@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use shared::{SharedAccountState};
+use shared::SharedAccountState;
 use yew::{html, Callback, Component, ComponentLink, Html, Properties, ShouldRender};
 use yewtil::{ptr::Irc, NeqAssign};
 
@@ -42,7 +42,7 @@ impl Component for Sidebar {
                     { self.props.accounts.iter().map(|(_, acc)| {
                         let account = acc.email.clone();
                         let cb = self.props.select_account_callback.clone();
-                        let onclick: Callback<_> = (move |_| cb.emit((account.to_string()))).into();
+                        let onclick: Callback<_> = (move |_| cb.emit(account.to_string())).into();
                         html! {
                             <div class="account" onclick=onclick>
                                 <div class="letter-icon" >

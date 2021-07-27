@@ -1,0 +1,7 @@
+[serve]
+port = 3000
+#open = true
+
+[build]
+target = "./frontend/index.html"
+dist = "build"

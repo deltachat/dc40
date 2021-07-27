@@ -124,7 +124,7 @@ impl Component for Chat {
         };
         let image_style = format!("background-color: #{:06X}", chat.color);
         let image = if let Some(ref profile_image) = chat.profile_image {
-            let src = format!("dc://{}", profile_image.to_string_lossy());
+            let src = format!("asset://{}", profile_image.to_string_lossy());
 
             html! {
                 <img

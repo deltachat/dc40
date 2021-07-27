@@ -26,22 +26,25 @@
   }
 
   &.send {
-    -webkit-mask-image: url('../assets/ionicons/send.svg');
+    -webkit-mask-image: url('assets/ionicons/send.svg');
   }
   &.checkmark {
-    -webkit-mask-image: url('../assets/ionicons/checkmark.svg');
+    -webkit-mask-image: url('assets/ionicons/checkmark.svg');
   }
   &.checkmark-done {
-    -webkit-mask-image: url('../assets/ionicons/checkmark-done.svg');
+    -webkit-mask-image: url('assets/ionicons/checkmark-done.svg');
   }
   &.alert {
-    -webkit-mask-image: url('../assets/ionicons/alert.svg');
+    -webkit-mask-image: url('assets/ionicons/alert.svg');
   }
   &.hourglass {
-    -webkit-mask-image: url('../assets/ionicons/hourglass.svg');
+    -webkit-mask-image: url('assets/ionicons/hourglass.svg');
   }
   &.add {
-    -webkit-mask-image: url('../assets/ionicons/add.svg');
+    -webkit-mask-image: url('assets/ionicons/add.svg');
+  }
+  &.close {
+    -webkit-mask-image: url('assets/ionicons/close.svg');
   }
 }
 

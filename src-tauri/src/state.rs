@@ -50,12 +50,12 @@ impl LocalState {
                             let account = Account::new(account_name).await?;
                             // attempt to configure it
                             match account.configure().await {
-                              Ok(()) => {
-                                info!("configured");
-                                account.context.start_io().await;
-                                accounts.insert(account_name.to_string(), account);
-                              },
-                              Err(err) => info!("Account could not be configured: {}", err)
+                                Ok(()) => {
+                                    info!("configured");
+                                    account.context.start_io().await;
+                                    accounts.insert(account_name.to_string(), account);
+                                }
+                                Err(err) => info!("Account could not be configured: {}", err),
                             }
                         }
                         None => {
@@ -73,9 +73,7 @@ impl LocalState {
         let selected_account = accounts.keys().next().cloned();
         info!("selecting account {:?}", selected_account);
         if let Some(ref selected) = selected_account {
-            accounts
-                .get(selected)
-                .unwrap();
+            accounts.get(selected).unwrap();
         }
         info!("loaded state");
 
