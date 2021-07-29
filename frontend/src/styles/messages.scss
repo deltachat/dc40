@@ -218,9 +218,9 @@
 
    
 .chat-input {
-  flex: 0 0 40px;
+  flex: 0 0 30px;
   border: 1px solid $gray;
-  minHeight: 30px;
+  min-height: 30px;
   margin: 10px;
   padding: 5px 5px 5px 15px;
   border-radius: 5px;
@@ -230,6 +230,8 @@
     flex: 1;
     outline: none;
     border: none;
+    -webkit-appearance: none;
+    font-size: 15px;
   }
 
   .send-button {

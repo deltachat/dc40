@@ -109,6 +109,12 @@ impl App {
             Msg::WsRequest(Request::SelectAccount { account })
         });
 
+        let account_details = self
+            .model
+            .accounts
+            .get(&self.model.selected_account.as_ref().unwrap_or_default())
+            .map(|s| s.email.clone());
+
         html! {
             <>
             { account_creation_modal }
@@ -121,6 +127,7 @@ impl App {
                 />
                 <Chatlist
                   selected_account=self.model.selected_account.irc()
+                  selected_account_details=account_details
                   selected_chat_id=self.model.selected_chat_id.irc()
                   selected_chat=self.model.selected_chat.irc()
                   selected_chat_length=self.model.selected_chat_length.irc()
