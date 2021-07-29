@@ -89,7 +89,7 @@ impl Component for Modal {
                 <div class="form-group">
                   <label for="email">{"Email"}</label>
                   <Field<Login>
-                    form=&self.form
+                    form=self.form.clone()
                     field_name="email"
                     oninput=self.link.callback(|_| Msg::FormUpdate) />
                   <div class="invalid-feedback">
@@ -98,7 +98,7 @@ impl Component for Modal {
 
                   <label for="password">{"Password"}</label>
                   <Field<Login>
-                    form=&self.form
+                    form=self.form.clone()
                     field_name="password"
                     input_type="password"
                     oninput=self.link.callback(|_| Msg::FormUpdate) />

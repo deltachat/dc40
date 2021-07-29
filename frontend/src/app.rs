@@ -121,7 +121,7 @@ impl App {
               <div class="app">
                 <Sidebar
                   accounts=self.model.accounts.irc()
-                  selected_account=self.model.selected_account.irc(),
+                  selected_account=self.model.selected_account.irc()
                   select_account_callback=select_account_callback
                   create_account_callback=create_account_callback
                 />

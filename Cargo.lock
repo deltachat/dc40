@@ -2898,9 +2898,9 @@ checksum = "7fb9b38af92608140b86b693604b9ffcc5824240a484d1ecd4795bacb2fe88f3"
 
 [[package]]
 name = "linkify"
-version = "0.4.0"
+version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "03951527dd24d2c59f407502e7d88e0948ef06fac23335b556a4c2bc03c22096"
+checksum = "04d828fdc1ffceb369a5a9183bd4df2dbb3678f40c8b3fbaa9231de32beb29f9"
 dependencies = [
  "memchr",
 ]
@@ -5490,9 +5490,9 @@ dependencies = [
 
 [[package]]
 name = "validator"
-version = "0.12.0"
+version = "0.14.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "841d6937c33ec6039d8071bcf72933146b5bbe378d645d8fa59bdadabfc2a249"
+checksum = "6d0f08911ab0fee2c5009580f04615fa868898ee57de10692a45da0c3bcc3e5e"
 dependencies = [
  "idna",
  "lazy_static",
@@ -5506,9 +5506,9 @@ dependencies = [
 
 [[package]]
 name = "validator_derive"
-version = "0.12.0"
+version = "0.14.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4286b4497f270f59276a89ae0ad109d5f8f18c69b613e3fb22b61201aadb0c4d"
+checksum = "d85135714dba11a1bd0b3eb1744169266f1a38977bf4e3ff5e2e1acb8c2b7eee"
 dependencies = [
  "if_chain",
  "lazy_static",
@@ -5522,9 +5522,13 @@ dependencies = [
 
 [[package]]
 name = "validator_types"
-version = "0.12.0"
+version = "0.14.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ad9680608df133af2c1ddd5eaf1ddce91d60d61b6bc51494ef326458365a470a"
+checksum = "ded9d97e1d42327632f5f3bae6403c04886e2de3036261ef42deebd931a6a291"
+dependencies = [
+ "proc-macro2",
+ "syn 1.0.74",
+]
 
 [[package]]
 name = "value-bag"
@@ -5966,24 +5970,21 @@ dependencies = [
 
 [[package]]
 name = "yew"
-version = "0.17.4"
+version = "0.18.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2d8703eb5b883e816cd74c65e2f6dd4144eeedb77c1b3e0284e8f3f593b80ab1"
+checksum = "e4d5154faef86dddd2eb333d4755ea5643787d20aca683e58759b0e53351409f"
 dependencies = [
  "anyhow",
  "anymap",
  "bincode",
- "cfg-if 0.1.10",
+ "cfg-if 1.0.0",
  "cfg-match",
  "console_error_panic_hook",
- "futures",
  "gloo",
  "http",
  "indexmap",
  "js-sys",
  "log",
- "proc-macro-hack",
- "proc-macro-nested",
  "ryu",
  "serde",
  "serde_json",
@@ -5997,13 +5998,12 @@ dependencies = [
 
 [[package]]
 name = "yew-macro"
-version = "0.17.0"
+version = "0.18.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "61a9a452e63b6222b28b426dafbc6b207192e0127cdb93324cc7407b8c7e1768"
+checksum = "d6e23bfe3dc3933fbe9592d149c9985f3047d08c637a884b9344c21e56e092ef"
 dependencies = [
  "boolinator",
  "lazy_static",
- "proc-macro-hack",
  "proc-macro2",
  "quote 1.0.9",
  "syn 1.0.74",
@@ -6012,7 +6012,7 @@ dependencies = [
 [[package]]
 name = "yew_form"
 version = "0.1.7"
-source = "git+https://github.com/dignifiedquire/yew_form?branch=fix-syn#396928676d128e41b2927925c9f1f86f278f02e0"
+source = "git+https://github.com/dignifiedquire/yew_form?branch=yew-18#e78f9a2505d0021fa897d329a554be5439cd397a"
 dependencies = [
  "validator",
  "validator_derive",
@@ -6022,7 +6022,7 @@ dependencies = [
 [[package]]
 name = "yew_form_derive"
 version = "0.1.7"
-source = "git+https://github.com/dignifiedquire/yew_form?branch=fix-syn#396928676d128e41b2927925c9f1f86f278f02e0"
+source = "git+https://github.com/dignifiedquire/yew_form?branch=yew-18#e78f9a2505d0021fa897d329a554be5439cd397a"
 dependencies = [
  "proc-macro2",
  "quote 1.0.9",
@@ -6032,14 +6032,14 @@ dependencies = [
 
 [[package]]
 name = "yewtil"
-version = "0.3.2"
+version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "003f4f533ee696c1f69d753db2c66096dec5700a93bd0bc801ab5891fec041c6"
+checksum = "8543663ac49cd613df079282a1d8bdbdebdad6e02bac229f870fd4237b5d9aaa"
 dependencies = [
- "futures",
  "log",
  "wasm-bindgen",
  "wasm-bindgen-futures",
+ "web-sys",
  "yew",
 ]
 
