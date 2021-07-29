@@ -10,7 +10,7 @@ build = "src/build.rs"
 
 [dependencies]
 shared = { path = "../shared", package = "dc40-shared" }
-deltachat = { git = "https://github.com/deltachat/deltachat-core-rust", branch = "fix-messages-read"}
+deltachat = { git = "https://github.com/deltachat/deltachat-core-rust", branch = "master"}
 async-std = "~1.9.0"
 async-tungstenite = { version = "0.14", features = ["async-std-runtime"] }
 femme = "2.1.1"
