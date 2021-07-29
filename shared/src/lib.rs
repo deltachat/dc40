@@ -22,7 +22,7 @@ pub enum Response {
         chats: Vec<ChatState>,
     },
     Account {
-        account: String,
+        account: u32,
     },
     Event {
         account: u32,
@@ -67,9 +67,9 @@ pub struct State {
 
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub struct SharedState {
-    pub accounts: HashMap<String, SharedAccountState>,
+    pub accounts: HashMap<u32, SharedAccountState>,
     pub errors: Vec<String>,
-    pub selected_account: Option<String>,
+    pub selected_account: Option<u32>,
     pub selected_chat_id: Option<u32>,
     pub selected_chat: Option<ChatState>,
 }
@@ -149,14 +149,12 @@ pub enum Request {
     Login {
         email: String,
         password: String,
-        remote: bool,
     },
     Import {
         path: String,
-        email: String,
     },
     SelectChat {
-        account: String,
+        account: u32,
         chat_id: u32,
     },
     LoadChatList {
@@ -168,7 +166,7 @@ pub enum Request {
         stop_index: usize,
     },
     SelectAccount {
-        account: String,
+        account: u32,
     },
     SendTextMessage {
         text: String,
@@ -178,9 +176,6 @@ pub enum Request {
         path: String,
         text: Option<String>,
         mime: Option<String>,
-    },
-    CreateChatById {
-        id: u32,
     },
     MaybeNetwork,
 }

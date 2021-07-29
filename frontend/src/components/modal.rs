@@ -9,6 +9,7 @@ use yewtil::{ptr::Irc, NeqAssign};
 
 #[derive(Properties, Clone, PartialEq)]
 pub struct Props {
+    pub submit_callback: Callback<(String, String)>,
     pub cancel_callback: Callback<()>,
 }
 
@@ -19,11 +20,11 @@ pub struct Modal {
 }
 
 #[derive(yew_form_derive::Model, Validate, PartialEq, Clone, Debug)]
-struct Login {
+pub struct Login {
     #[validate(email(message = "Must be a valid email"))]
-    email: String,
+    pub email: String,
     #[validate(length(min = 1, message = "Password is required"))]
-    password: String,
+    pub password: String,
 }
 
 impl Default for Login {
@@ -59,6 +60,10 @@ impl Component for Modal {
             Msg::Submit => {
                 let valid = self.form.validate();
                 info!("submitted  (valid: {})", valid);
+                self.props.submit_callback.emit((
+                    self.form.field_value("email"),
+                    self.form.field_value("password"),
+                ));
                 true
             }
         }

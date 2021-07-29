@@ -6,10 +6,10 @@ use yewtil::{ptr::Irc, NeqAssign};
 
 #[derive(Properties, Clone, PartialEq)]
 pub struct Props {
-    pub accounts: Irc<HashMap<String, SharedAccountState>>,
-    pub selected_account: Irc<Option<String>>,
+    pub accounts: Irc<HashMap<u32, SharedAccountState>>,
+    pub selected_account: Irc<Option<u32>>,
     pub create_account_callback: Callback<()>,
-    pub select_account_callback: Callback<String>,
+    pub select_account_callback: Callback<u32>,
 }
 
 pub struct Sidebar {
@@ -39,10 +39,10 @@ impl Component for Sidebar {
         html! {
             <div class="sidebar">
                 <div class="account-list">
-                    { self.props.accounts.iter().map(|(_, acc)| {
-                        let account = acc.email.clone();
+                    { self.props.accounts.iter().map(|(id, acc)| {
                         let cb = self.props.select_account_callback.clone();
-                        let onclick: Callback<_> = (move |_| cb.emit(account.to_string())).into();
+                        let id = *id;
+                        let onclick: Callback<_> = (move |_| cb.emit(id)).into();
                         html! {
                             <div class="account" onclick=onclick>
                                 <div class="letter-icon" >

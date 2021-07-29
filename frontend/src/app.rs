@@ -13,7 +13,10 @@ use yewtil::{
 use shared::*;
 
 use crate::components::{
-    chatlist::Chatlist, message_input::MessageInput, messages::Messages, modal::Modal,
+    chatlist::Chatlist,
+    message_input::MessageInput,
+    messages::Messages,
+    modal::{Login, Modal},
     sidebar::Sidebar,
 };
 
@@ -33,6 +36,7 @@ pub enum Msg {
     WsRequest(Request),
     ShowAccountCreation,
     CancelAccountCreation,
+    AccountCreation(String, String),
 }
 
 impl From<WsAction> for Msg {
@@ -49,9 +53,9 @@ pub struct App {
 
 #[derive(Debug, Clone, Default)]
 struct Model {
-    accounts: Mrc<HashMap<String, SharedAccountState>>,
+    accounts: Mrc<HashMap<u32, SharedAccountState>>,
     errors: Mrc<Vec<String>>,
-    selected_account: Mrc<Option<String>>,
+    selected_account: Mrc<Option<u32>>,
     selected_chat_id: Mrc<Option<u32>>,
     selected_chat: Mrc<Option<ChatState>>,
     selected_chat_length: Mrc<usize>,
@@ -88,9 +92,14 @@ impl App {
         let create_account_callback = link.callback(move |_| Msg::ShowAccountCreation);
         let cancel_account_create_callback = link.callback(move |_| Msg::CancelAccountCreation);
 
+        let submit_account_create_callback =
+            link.callback(move |(email, password)| Msg::AccountCreation(email, password));
+
         let account_creation_modal = if self.model.show_account_creation {
             html! {
-                <Modal cancel_callback=cancel_account_create_callback />
+                <Modal
+                 submit_callback=submit_account_create_callback
+                 cancel_callback=cancel_account_create_callback />
             }
         } else {
             html! {}
@@ -335,6 +344,12 @@ impl Component for App {
                 return true;
             }
             Msg::CancelAccountCreation => {
+                self.model.show_account_creation = false;
+                return true;
+            }
+            Msg::AccountCreation(email, password) => {
+                let msg = Msg::WsRequest(Request::Login { email, password });
+                self.link.send_message(msg);
                 self.model.show_account_creation = false;
                 return true;
             }

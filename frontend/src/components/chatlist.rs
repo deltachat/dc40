@@ -7,11 +7,11 @@ use super::list::List;
 
 #[derive(Properties, Clone, PartialEq)]
 pub struct Props {
-    pub selected_account: Irc<Option<String>>,
+    pub selected_account: Irc<Option<u32>>,
     pub selected_chat_id: Irc<Option<u32>>,
     pub selected_chat: Irc<Option<ChatState>>,
     pub selected_chat_length: Irc<usize>,
-    pub select_chat_callback: Callback<(String, u32)>,
+    pub select_chat_callback: Callback<(u32, u32)>,
     pub chats: Irc<Vec<ChatState>>,
     pub chats_range: Irc<(usize, usize)>,
     pub chats_len: Irc<usize>,
