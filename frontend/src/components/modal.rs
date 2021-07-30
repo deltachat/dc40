@@ -12,7 +12,7 @@ use yewtil::NeqAssign;
 pub struct Props {
     pub submit_callback: Callback<(String, String)>,
     pub cancel_callback: Callback<()>,
-    pub import_callback: Callback<(String, Vec<u8>)>,
+    pub import_callback: Callback<(Vec<u8>)>,
 }
 
 #[derive(PartialEq)]
@@ -99,8 +99,8 @@ impl Component for Modal {
                 let valid = self.login_form.validate();
                 info!("submitted  (valid: {})", valid);
                 self.props.submit_callback.emit((
-                    self.form.field_value("email"),
-                    self.form.field_value("password"),
+                    self.login_form.field_value("email"),
+                    self.login_form.field_value("password"),
                 ));
                 true
             }
@@ -120,7 +120,7 @@ impl Component for Modal {
                 self.create_type.next();
                 self.props
                     .import_callback
-                    .emit((self.import_form.field_value("email"), data));
+                    .emit(data);
                 true
             }
         }
@@ -156,7 +156,7 @@ impl Component for Modal {
                         <div class="form-group">
                         <label for="email">{"Email"}</label>
                         <Field<Login>
-                            form=&self.login_form
+                            form=self.login_form.clone()
                             field_name="email"
                             oninput=self.link.callback(|_| Msg::FormUpdate) />
                         <div class="invalid-feedback">
@@ -165,7 +165,7 @@ impl Component for Modal {
 
                         <label for="password">{"Password"}</label>
                         <Field<Login>
-                            form=&self.login_form
+                            form=self.login_form.clone()
                             field_name="password"
                             input_type="password"
                             oninput=self.link.callback(|_| Msg::FormUpdate) />
@@ -190,7 +190,7 @@ impl Component for Modal {
                         <div class="form-group">
                             <label for="email">{"Email"}</label>
                             <Field<ImportForm>
-                                form=&self.import_form
+                                form=self.import_form.clone()
                                 field_name="email"
                                 oninput=self.link.callback(|_| Msg::FormUpdate) />
                             <div class="invalid-feedback">

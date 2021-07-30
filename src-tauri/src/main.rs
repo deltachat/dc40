@@ -97,7 +97,7 @@ async fn accept_connection(stream: TcpStream, local_state: LocalState) -> Result
         match &parsed {
             Ok(req) => {
                 match req{
-                    Request::Import { email, .. } => info!("request: Import {{email: {}}}", email),
+                    Request::Import { .. } => info!("request: Import"),
                     req => info!("request: {:?}", req )
                 }
             },
