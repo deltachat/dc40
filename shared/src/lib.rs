@@ -150,9 +150,7 @@ pub enum Request {
         email: String,
         password: String,
     },
-    Import {
-        data: Vec<u8>,
-    },
+    Import {},
     SelectChat {
         account: u32,
         chat_id: u32,

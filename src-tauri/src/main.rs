@@ -93,13 +93,11 @@ async fn accept_connection(stream: TcpStream, local_state: LocalState) -> Result
             continue;
         }
         let parsed: std::result::Result<Request, _> = bincode::deserialize(&msg.into_data());
-        
+
         match &parsed {
-            Ok(req) => {
-                match req{
-                    Request::Import { .. } => info!("request: Import"),
-                    req => info!("request: {:?}", req )
-                }
+            Ok(req) => match req {
+                Request::Import { .. } => info!("request: Import"),
+                req => info!("request: {:?}", req),
             },
             Err(_) => error!("couldn't deserialize request"),
         }
@@ -131,13 +129,27 @@ where
             let email = email.to_lowercase();
             let (id, ctx) = local_state.add_account().await?;
 
-            local_state.login(id, &ctx, &email, &password).await?;
+            task::spawn(async {
+                if let Ok(listener) = TcpListener::bind("127.0.0.1:6969").await {
+                    let t = listener.accept().await;
+                    if let Ok((stream, _)) = t {
+                        let mut wasm_stream =
+                            async_tungstenite::accept_async(stream).await.unwrap();
+                        if let Some(Ok(Message::Binary(import))) = wasm_stream.next().await {
+                            info!("received update");
+                        };
+                    }
+                }
+            });
+
+            
+            /*local_state.login(id, &ctx, &email, &password).await?;
 
             local_state
                 .send_account_details(&ctx, id, write.clone())
-                .await?;
+                .await?; */
         }
-        Request::Import { data } => {
+        Request::Import {} => {
             let (id, ctx) = local_state.add_account().await?;
 
             //local_state.import(&ctx, id, &path).await?;

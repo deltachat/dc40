@@ -26,7 +26,7 @@ yew_form_derive = { git = "https://github.com/dignifiedquire/yew_form", branch =
 validator = "0.14"
 validator_derive = "0.14"
 gloo = "*"
-
+wasm-streams = "*"
 
 [dependencies.web-sys]
 version = "0.3.4"

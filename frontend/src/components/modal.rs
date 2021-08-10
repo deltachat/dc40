@@ -12,7 +12,7 @@ use yewtil::NeqAssign;
 pub struct Props {
     pub submit_callback: Callback<(String, String)>,
     pub cancel_callback: Callback<()>,
-    pub import_callback: Callback<(Vec<u8>)>,
+    pub import_callback: Callback<(ReadableStream)>,
 }
 
 #[derive(PartialEq)]

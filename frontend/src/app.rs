@@ -96,7 +96,12 @@ impl App {
             link.callback(move |(email, password)| Msg::AccountCreation(email, password));
 
         let import_account_callback =
-            link.callback(move |data| Msg::WsRequest(Request::Import { data }));
+            link.callback(move |data| 
+    
+            Msg::WsRequest(Request::Import {})
+            Msg::
+        
+        );
 
         let account_creation_modal = if self.model.show_account_creation {
             html! {
@@ -347,6 +352,8 @@ impl Component for App {
                 return false;
             }
             Msg::WsRequest(req) => {
+                if let Request::Import { .. } = req {};
+
                 if let Some(ws) = self.ws.as_mut() {
                     ws.send_binary(Bincode(&req));
                 }
