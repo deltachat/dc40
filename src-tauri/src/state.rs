@@ -1,91 +1,511 @@
 use std::collections::HashMap;
 
-use anyhow::Result;
-use async_std::{
-    sync::{Arc, RwLock},
-    task,
-};
-use async_tungstenite::tungstenite::Message;
+use anyhow::{anyhow, Result};
+use async_std::prelude::*;
+use async_std::sync::{Arc, RwLock};
+use async_std::task;
+use async_tungstenite::tungstenite::{Error, Message};
+use broadcaster::BroadcastChannel;
+use deltachat::chat::{Chat, ChatId};
+use deltachat::context::Context;
+use deltachat::{message, EventType};
 use futures::sink::SinkExt;
-use log::{info, warn};
+use log::*;
+use num_traits::FromPrimitive;
 use shared::*;
 
 use crate::account::*;
 
-#[derive(Debug, Default)]
+#[derive(Debug, Clone)]
 pub struct LocalState {
-    pub accounts: HashMap<String, Account>,
-    pub errors: Vec<anyhow::Error>,
-    pub selected_account: Option<String>,
+    inner: Arc<RwLock<LocalStateInner>>,
+    events: BroadcastChannel<deltachat::Event>,
 }
 
+#[derive(Debug)]
+struct LocalStateInner {
+    account_states: HashMap<u32, Account>,
+    accounts: deltachat::accounts::Accounts,
+    errors: Vec<anyhow::Error>,
+}
+
+sa::assert_impl_all!(LocalState: Send);
+
 impl LocalState {
+    pub async fn new() -> Result<Self> {
+        let inner = LocalStateInner::new().await?;
+
+        let receiver = BroadcastChannel::new();
+        let sender = receiver.clone();
+        let mut events = inner.accounts.get_event_emitter().await;
+
+        task::spawn(async move {
+            while let Ok(Some(event)) = events.recv().await {
+                if let Err(err) = sender.send(&event).await {
+                    error!("Failed to send event: {:?}", err);
+                }
+            }
+        });
+
+        Ok(Self {
+            inner: Arc::new(RwLock::new(inner)),
+            events: receiver,
+        })
+    }
+
+    async fn with_account_state<F>(&self, id: u32, f: F)
+    where
+        F: FnOnce(&mut crate::account::AccountState),
+    {
+        let ls = self.inner.read().await;
+        let account = ls.account_states.get(&id).expect("missing account");
+
+        let state = &mut account.state.write().await;
+        f(state);
+    }
+
+    pub async fn subscribe_all<T>(&self, writer: Arc<RwLock<T>>) -> Result<()>
+    where
+        T: futures::sink::Sink<Message> + Unpin + Sync + Send + 'static,
+        T::Error: std::fmt::Debug + std::error::Error + Send + Sync,
+    {
+        let mut events = self.events.clone();
+        let ls = self.clone();
+
+        task::spawn(async move {
+            while let Some(event) = events.next().await {
+                let ctx = ls
+                    .inner
+                    .read()
+                    .await
+                    .accounts
+                    .get_account(event.id)
+                    .await
+                    .unwrap();
+
+                let res = match event.typ {
+                    EventType::ConfigureProgress { progress, .. } => {
+                        if progress == 0 {
+                            ls.with_account_state(event.id, |state| {
+                                state.logged_in = Login::Error("failed to login".into());
+                            })
+                            .await;
+                            ls.send_event(
+                                writer.clone(),
+                                event.id,
+                                shared::Event::Configure(shared::Progress::Error),
+                            )
+                            .await
+                        } else {
+                            let p = if progress == 1000 {
+                                shared::Progress::Success
+                            } else {
+                                ls.with_account_state(event.id, |state| {
+                                    state.logged_in = Login::Progress(progress);
+                                })
+                                .await;
+                                shared::Progress::Step(progress)
+                            };
+                            ls.send_event(writer.clone(), event.id, shared::Event::Configure(p))
+                                .await
+                        }
+                    }
+                    EventType::ImexProgress(progress) => {
+                        if progress == 0 {
+                            ls.with_account_state(event.id, |state| {
+                                state.logged_in = Login::Error("failed to import".into());
+                            })
+                            .await;
+                            ls.send_event(
+                                writer.clone(),
+                                event.id,
+                                shared::Event::Imex(shared::Progress::Error),
+                            )
+                            .await
+                        } else {
+                            let p = if progress == 1000 {
+                                shared::Progress::Success
+                            } else {
+                                ls.with_account_state(event.id, |state| {
+                                    state.logged_in = Login::Progress(progress);
+                                })
+                                .await;
+                                shared::Progress::Step(progress)
+                            };
+                            ls.send_event(writer.clone(), event.id, shared::Event::Imex(p))
+                                .await
+                        }
+                    }
+                    EventType::ImapConnected(_) | EventType::SmtpConnected(_) => {
+                        info!("logged in");
+                        ls.with_account_state(event.id, |state| {
+                            state.logged_in = Login::Success;
+                        })
+                        .await;
+                        ls.send_event(writer.clone(), event.id, shared::Event::Connected)
+                            .await
+                    }
+                    EventType::IncomingMsg { chat_id, msg_id } => {
+                        let load = || async {
+                            let msg = message::Message::load_from_db(&ctx, msg_id).await.map_err(
+                                |err| anyhow!("failed to load msg: {}: {}", msg_id, err),
+                            )?;
+                            let chat = Chat::load_from_db(&ctx, chat_id)
+                                .await
+                                .map_err(|err| anyhow!("failed to load chat: {:?}", err))?;
+
+                            ls.send_event(
+                                writer.clone(),
+                                event.id,
+                                shared::Event::MessageIncoming {
+                                    chat_id: chat_id.to_u32(),
+                                    title: chat.get_name().to_string(),
+                                    body: msg.get_text().unwrap_or_default(),
+                                },
+                            )
+                            .await
+                        };
+                        load().await
+                    }
+                    EventType::MsgDelivered { chat_id, .. }
+                    | EventType::MsgFailed { chat_id, .. }
+                    | EventType::MsgsChanged { chat_id, .. }
+                    | EventType::MsgRead { chat_id, .. }
+                    | EventType::ChatModified(chat_id)
+                    | EventType::MsgsNoticed(chat_id) => {
+                        ls.send_event(
+                            writer.clone(),
+                            event.id,
+                            shared::Event::MessagesChanged {
+                                chat_id: chat_id.to_u32(),
+                            },
+                        )
+                        .await
+                    }
+                    EventType::Info(msg) => {
+                        info!("{}", msg);
+                        ls.send_event(
+                            writer.clone(),
+                            event.id,
+                            shared::Event::Log(shared::Log::Info(msg)),
+                        )
+                        .await
+                    }
+                    EventType::Warning(msg) => {
+                        warn!("{}", msg);
+                        ls.send_event(
+                            writer.clone(),
+                            event.id,
+                            shared::Event::Log(shared::Log::Warning(msg)),
+                        )
+                        .await
+                    }
+                    EventType::Error(msg) => {
+                        error!("{}", msg);
+                        ls.send_event(
+                            writer.clone(),
+                            event.id,
+                            shared::Event::Log(shared::Log::Error(msg)),
+                        )
+                        .await
+                    }
+                    _ => {
+                        debug!("{:?}", event);
+                        Ok(())
+                    }
+                };
+
+                match res {
+                    Ok(_) => {}
+                    Err(err) => match err.downcast_ref::<Error>() {
+                        Some(Error::ConnectionClosed) => {
+                            // stop listening
+                            break;
+                        }
+                        _ => {}
+                    },
+                }
+            }
+        });
+
+        Ok(())
+    }
+
+    pub async fn add_account(&self) -> Result<(u32, Context)> {
+        let mut ls = self.inner.write().await;
+        let id = ls.accounts.add_account().await?;
+        let ctx = ls.accounts.get_account(id).await.unwrap();
+        let account = Account::new()?;
+
+        ls.account_states.insert(id, account);
+
+        Ok((id, ctx.clone()))
+    }
+
+    pub async fn login(&self, id: u32, ctx: &Context, email: &str, password: &str) -> Result<()> {
+        let res = self
+            .inner
+            .read()
+            .await
+            .account_states
+            .get(&id)
+            .unwrap()
+            .login(&ctx, &email, &password)
+            .await;
+        if let Err(err) = res {
+            let mut ls = self.inner.write().await;
+            ls.errors.push(err);
+            ls.account_states.remove(&id);
+            ls.accounts.remove_account(id).await?;
+        }
+
+        Ok(())
+    }
+
+    pub async fn send_account_details<T>(
+        &self,
+        ctx: &Context,
+        id: u32,
+        writer: Arc<RwLock<T>>,
+    ) -> Result<()>
+    where
+        T: futures::sink::Sink<Message> + Unpin + Sync + Send + 'static,
+        T::Error: std::fmt::Debug + std::error::Error + Send + Sync,
+    {
+        let ls = self.inner.read().await;
+        ls.send_update(writer.clone()).await?;
+
+        if let Some(account) = ls.account_states.get(&id) {
+            // chat list
+            let (range, len, chats) = account.load_chat_list(&ctx, 0, 10).await?;
+            send(writer.clone(), Response::ChatList { range, len, chats }).await?;
+
+            // send selected chat if exists
+            if let Some(_selected_chat) = account.state.read().await.selected_chat_id {
+                let (chat_id, range, items, messages) =
+                    account.load_message_list(&ctx, None).await?;
+
+                send(
+                    writer,
+                    Response::MessageList {
+                        chat_id,
+                        range,
+                        items,
+                        messages,
+                    },
+                )
+                .await?;
+            }
+        }
+
+        Ok(())
+    }
+
+    pub async fn import(&self, ctx: &Context, id: u32, path: &str) -> Result<()> {
+        let res = self
+            .inner
+            .read()
+            .await
+            .account_states
+            .get(&id)
+            .unwrap()
+            .import(&ctx, &async_std::path::PathBuf::from(path))
+            .await;
+        if let Err(err) = res {
+            let mut ls = self.inner.write().await;
+            ls.errors.push(err);
+            ls.account_states.remove(&id);
+            ls.accounts.remove_account(id).await?;
+        }
+
+        Ok(())
+    }
+
+    pub async fn send_update<T: futures::sink::Sink<Message> + Unpin + Sync + Send + 'static>(
+        &self,
+        writer: Arc<RwLock<T>>,
+    ) -> Result<()>
+    where
+        T::Error: std::fmt::Debug + std::error::Error + Send + Sync,
+    {
+        self.inner.read().await.send_update(writer).await
+    }
+
+    pub async fn send_event<T: futures::sink::Sink<Message> + Unpin + Sync + Send + 'static>(
+        &self,
+        writer: Arc<RwLock<T>>,
+        account: u32,
+        event: shared::Event,
+    ) -> Result<()>
+    where
+        T::Error: std::fmt::Debug + std::error::Error + Send + Sync,
+    {
+        self.inner
+            .read()
+            .await
+            .send_event(writer, account, event)
+            .await
+    }
+
+    pub async fn select_chat(&self, account_id: u32, chat_id: u32) -> Result<Response> {
+        let ls = self.inner.write().await;
+        if let Some(account) = ls.account_states.get(&account_id) {
+            let ctx = ls.accounts.get_account(account_id).await.unwrap();
+            let chat = ChatId::new(chat_id);
+            account.select_chat(&ctx, chat).await?;
+
+            let (chat_id, range, items, messages) = account.load_message_list(&ctx, None).await?;
+
+            Ok(Response::MessageList {
+                chat_id,
+                range,
+                items,
+                messages,
+            })
+        } else {
+            Err(anyhow!("invalid account: {}-{}", account_id, chat_id))
+        }
+    }
+
+    pub async fn load_chat_list(&self, start_index: usize, stop_index: usize) -> Result<Response> {
+        let ls = self.inner.read().await;
+        if let Some((account, ctx)) = ls.get_selected_account().await {
+            info!("Loading chat list");
+            match account.load_chat_list(&ctx, start_index, stop_index).await {
+                Ok((range, len, chats)) => Ok(Response::ChatList { range, len, chats }),
+                Err(err) => {
+                    info!("Could not load chat list: {}", err);
+                    // send an empty chat list to be handled by frontend
+                    Ok(Response::ChatList {
+                        range: (start_index, stop_index),
+                        len: 0,
+                        chats: Vec::new(),
+                    })
+                }
+            }
+        } else {
+            Err(anyhow!("no selected account"))
+        }
+    }
+
+    pub async fn load_message_list(
+        &self,
+        start_index: usize,
+        stop_index: usize,
+    ) -> Result<Response> {
+        let ls = self.inner.read().await;
+        if let Some((account, ctx)) = ls.get_selected_account().await {
+            let range = if start_index == 0 && stop_index == 0 {
+                None
+            } else {
+                Some((start_index, stop_index))
+            };
+            let (chat_id, range, items, messages) = account.load_message_list(&ctx, range).await?;
+
+            Ok(Response::MessageList {
+                chat_id,
+                range,
+                items,
+                messages,
+            })
+        } else {
+            Err(anyhow!("no selected account"))
+        }
+    }
+
+    pub async fn select_account(&self, account_id: u32) -> Result<Response> {
+        let mut ls = self.inner.write().await;
+        ls.select_account(account_id).await?;
+        Ok(Response::Account {
+            account: account_id,
+        })
+    }
+
+    pub async fn send_text_message(&self, text: String) -> Result<()> {
+        let ls = self.inner.read().await;
+        if let Some((account, ctx)) = ls.get_selected_account().await {
+            account.send_text_message(&ctx, text).await?;
+            Ok(())
+        } else {
+            Err(anyhow!("no account selected"))
+        }
+    }
+
+    pub async fn send_file_message(
+        &self,
+        typ: Viewtype,
+        path: String,
+        text: Option<String>,
+        mime: Option<String>,
+    ) -> Result<()> {
+        let ls = self.inner.read().await;
+        if let Some((account, ctx)) = ls.get_selected_account().await {
+            account
+                .send_file_message(
+                    &ctx,
+                    Viewtype::from_i32(typ as i32).unwrap(),
+                    path,
+                    text,
+                    mime,
+                )
+                .await?;
+            Ok(())
+        } else {
+            Err(anyhow!("no account selected"))
+        }
+    }
+
+    pub async fn maybe_network(&self) -> Result<()> {
+        let ls = self.inner.read().await;
+        ls.accounts.maybe_network().await;
+        Ok(())
+    }
+}
+
+impl LocalStateInner {
     pub async fn new() -> Result<Self> {
         info!("restoring local state");
 
         // load accounts from default dir
-        let mut accounts = HashMap::new();
-
-        let matcher = format!("{}/*.sqlite", HOME_DIR.display());
-        for entry in task::spawn_blocking(move || glob::glob(&matcher)).await? {
-            match entry {
-                Ok(path) => {
-                    match path.file_stem() {
-                        Some(account_name) => {
-                            let account_name = match account_name.to_str() {
-                                Some(name) => name,
-                                None => {
-                                    warn!("Ignoring invalid filename: '{}'", path.display());
-                                    continue;
-                                }
-                            };
-
-                            // Load account
-                            info!(
-                                "Loading account: '{}' from '{}'",
-                                account_name,
-                                path.display()
-                            );
-
-                            let account = Account::new(account_name).await?;
-                            // attempt to configure it
-                            match account.configure().await {
-                                Ok(()) => {
-                                    info!("configured");
-                                    account.context.start_io().await;
-                                    accounts.insert(account_name.to_string(), account);
-                                }
-                                Err(err) => info!("Account could not be configured: {}", err),
-                            }
-                        }
-                        None => {
-                            warn!("Ignoring invalid filename: '{}'", path.display());
-                        }
-                    }
-                }
-                Err(err) => {
-                    warn!("Ignoring invalid file: {}", err);
-                }
-            }
+        let mut account_states = HashMap::new();
+        let accounts =
+            deltachat::accounts::Accounts::new("cool_os".to_string(), HOME_DIR.clone()).await?;
+        for id in &accounts.get_all().await {
+            let state = Account::new()?;
+            account_states.insert(*id, state);
         }
 
-        // Select the first one by default
-        let selected_account = accounts.keys().next().cloned();
-        info!("selecting account {:?}", selected_account);
-        if let Some(ref selected) = selected_account {
-            accounts.get(selected).unwrap();
-        }
         info!("loaded state");
 
-        Ok(LocalState {
+        accounts.start_io().await;
+
+        info!("started io");
+
+        Ok(Self {
             accounts,
+            account_states,
             errors: Vec::new(),
-            selected_account,
         })
     }
-}
 
-impl LocalState {
+    pub async fn get_selected_account(&self) -> Option<(&Account, deltachat::context::Context)> {
+        if let Some(ctx) = self.accounts.get_selected_account().await {
+            let id = ctx.get_id();
+            if let Some(account) = self.account_states.get(&id) {
+                Some((account, ctx))
+            } else {
+                None
+            }
+        } else {
+            None
+        }
+    }
+
+    pub async fn select_account(&mut self, id: u32) -> Result<()> {
+        self.accounts.select_account(id).await?;
+        Ok(())
+    }
+
     pub async fn send_update<T: futures::sink::Sink<Message> + Unpin + Sync + Send + 'static>(
         &self,
         writer: Arc<RwLock<T>>,
@@ -94,7 +514,7 @@ impl LocalState {
         T::Error: std::fmt::Debug + std::error::Error + Send + Sync,
     {
         let response = self.to_response().await;
-        self.send(writer, response).await?;
+        send(writer, response).await?;
         Ok(())
     }
 
@@ -107,48 +527,48 @@ impl LocalState {
     where
         T::Error: std::fmt::Debug + std::error::Error + Send + Sync,
     {
-        self.send(writer, Response::Event { account, event })
-            .await?;
+        send(writer, Response::Event { account, event }).await?;
         Ok(())
     }
 
-    pub async fn send<T: futures::sink::Sink<Message> + Unpin + Sync + Send + 'static>(
-        &self,
-        writer: Arc<RwLock<T>>,
-        response: Response,
-    ) -> Result<()>
-    where
-        T::Error: std::fmt::Debug + std::error::Error + Send + Sync,
-    {
-        writer
-            .write()
-            .await
-            .send(Message::binary(bincode::serialize(&response).unwrap()))
-            .await
-            .map_err(Into::into)
+    pub async fn get_selected_account_id(&self) -> Option<u32> {
+        if let Some(ctx) = self.accounts.get_selected_account().await {
+            Some(ctx.get_id())
+        } else {
+            None
+        }
+    }
+
+    pub async fn get_selected_account_state(&self) -> Option<&Account> {
+        if let Some(id) = self.get_selected_account_id().await {
+            self.account_states.get(&id)
+        } else {
+            None
+        }
     }
 
     pub async fn to_response(&self) -> Response {
-        let mut accounts = HashMap::with_capacity(self.accounts.len());
-        for (email, account) in self.accounts.iter() {
+        let mut accounts = HashMap::with_capacity(self.account_states.len());
+        for (id, account) in self.account_states.iter() {
             let account = &account.state.read().await;
+            let ctx = self.accounts.get_account(*id).await.unwrap();
+            let email = ctx
+                .get_config(deltachat::config::Config::Addr)
+                .await
+                .unwrap()
+                .unwrap();
             accounts.insert(
-                email.clone(),
+                *id,
                 SharedAccountState {
                     logged_in: account.logged_in.clone(),
-                    email: account.email.clone(),
+                    email,
                 },
             );
         }
 
         let errors = self.errors.iter().map(|e| e.to_string()).collect();
         let (selected_chat_id, selected_chat) =
-            if let Some(ref account_name) = self.selected_account {
-                let account = self
-                    .accounts
-                    .get(account_name)
-                    .expect("invalid account state");
-
+            if let Some(account) = self.get_selected_account_state().await {
                 let state = account.state.read().await;
                 (state.selected_chat_id.clone(), state.selected_chat.clone())
             } else {
@@ -160,11 +580,24 @@ impl LocalState {
                 shared: SharedState {
                     accounts,
                     errors,
-                    selected_account: self.selected_account.clone(),
+                    selected_account: self.get_selected_account_id().await,
                     selected_chat_id: selected_chat_id.map(|s| s.to_u32()),
                     selected_chat,
                 },
             },
         }
     }
+}
+
+pub async fn send<T>(writer: Arc<RwLock<T>>, response: Response) -> Result<()>
+where
+    T: futures::sink::Sink<Message> + Unpin + Sync + Send + 'static,
+    T::Error: std::fmt::Debug + std::error::Error + Send + Sync,
+{
+    writer
+        .write()
+        .await
+        .send(Message::binary(bincode::serialize(&response).unwrap()))
+        .await
+        .map_err(Into::into)
 }

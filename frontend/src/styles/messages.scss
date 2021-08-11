@@ -1,5 +1,32 @@
 @import "./variables";
 
+
+@mixin do-not-break {
+  /* These are technically the same, but use both */
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+
+  -ms-word-break: break-all;
+  /* This is the dangerous one in WebKit, as it breaks things wherever */
+  word-break: break-all;
+  /* Instead use this non-standard one: */
+  word-break: break-word;
+
+  /* Adds a hyphen where the word breaks, if supported (No Blink) */
+  -ms-hyphens: auto;
+  -moz-hyphens: auto;
+  -webkit-hyphens: auto;
+  hyphens: auto;
+}
+
+.message-list-wrapper {
+  flex: 1 1 auto;
+  max-height: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
 .message-list {
   flex: 1 1 auto;
   overflow-y: auto;
@@ -51,7 +78,7 @@
         margin-right: 5px;
         flex: 0 0 43px;
         width: 43px;
-        padding-top: 4px;
+        padding-top: 1px;
       }
 
       .message-timestamp {
@@ -150,9 +177,8 @@
 
       .message-quote-text {
         font-size: 13px;
-        overflow-wrap: anywhere;
         white-space: pre-wrap;
-        line-break: anyhwere;
+        @include do-not-break;
       }
     }
     
@@ -183,9 +209,8 @@
           display: block;
           flex: 1;
           color: #0c1d3b;
-          overflow-wrap: anywhere;
           white-space: pre-wrap;
-          line-break: anyhwere;
+          @include do-not-break;
 
           a {
             display: inline;
@@ -218,9 +243,9 @@
 
    
 .chat-input {
-  flex: 0 0 40px;
+  flex: 0 0 30px;
   border: 1px solid $gray;
-  minHeight: 30px;
+  min-height: 30px;
   margin: 10px;
   padding: 5px 5px 5px 15px;
   border-radius: 5px;
@@ -230,6 +255,8 @@
     flex: 1;
     outline: none;
     border: none;
+    -webkit-appearance: none;
+    font-size: 15px;
   }
 
   .send-button {

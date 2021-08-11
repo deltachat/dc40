@@ -15,16 +15,16 @@ serde = { version = "1", features = ["derive"] }
 wasm-bindgen = "0.2.58"
 wasm-logger = "0.2"
 wee_alloc = { version = "0.4.4", optional = true }
-yew = { version = "0.17", features = ["bincode"] }
+yew = { version = "0.18", features = ["bincode"] }
 anyhow = "1.0.32"
 shared = { path = "../shared", package = "dc40-shared" }
-yewtil = "0.3.0"
-linkify = "0.4"
+yewtil = "0.4.0"
+linkify = "0.7"
 chrono = { version = "0.4.15", features = ["serde", "wasmbind"] }
-yew_form = { git = "https://github.com/dignifiedquire/yew_form", branch = "fix-syn"}
-yew_form_derive = { git = "https://github.com/dignifiedquire/yew_form", branch = "fix-syn"}
-validator = "0.12"
-validator_derive = "0.12"
+yew_form = { git = "https://github.com/dignifiedquire/yew_form", branch = "yew-18"}
+yew_form_derive = { git = "https://github.com/dignifiedquire/yew_form", branch = "yew-18"}
+validator = "0.14"
+validator_derive = "0.14"
 
 [dependencies.web-sys]
 version = "0.3.4"

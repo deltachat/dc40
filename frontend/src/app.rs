@@ -13,7 +13,10 @@ use yewtil::{
 use shared::*;
 
 use crate::components::{
-    chatlist::Chatlist, message_input::MessageInput, messages::Messages, modal::Modal,
+    chatlist::Chatlist,
+    message_input::MessageInput,
+    messages::Messages,
+    modal::{Login, Modal},
     sidebar::Sidebar,
 };
 
@@ -33,6 +36,7 @@ pub enum Msg {
     WsRequest(Request),
     ShowAccountCreation,
     CancelAccountCreation,
+    AccountCreation(String, String),
 }
 
 impl From<WsAction> for Msg {
@@ -49,9 +53,9 @@ pub struct App {
 
 #[derive(Debug, Clone, Default)]
 struct Model {
-    accounts: Mrc<HashMap<String, SharedAccountState>>,
+    accounts: Mrc<HashMap<u32, SharedAccountState>>,
     errors: Mrc<Vec<String>>,
-    selected_account: Mrc<Option<String>>,
+    selected_account: Mrc<Option<u32>>,
     selected_chat_id: Mrc<Option<u32>>,
     selected_chat: Mrc<Option<ChatState>>,
     selected_chat_length: Mrc<usize>,
@@ -88,9 +92,14 @@ impl App {
         let create_account_callback = link.callback(move |_| Msg::ShowAccountCreation);
         let cancel_account_create_callback = link.callback(move |_| Msg::CancelAccountCreation);
 
+        let submit_account_create_callback =
+            link.callback(move |(email, password)| Msg::AccountCreation(email, password));
+
         let account_creation_modal = if self.model.show_account_creation {
             html! {
-                <Modal cancel_callback=cancel_account_create_callback />
+                <Modal
+                 submit_callback=submit_account_create_callback
+                 cancel_callback=cancel_account_create_callback />
             }
         } else {
             html! {}
@@ -100,18 +109,43 @@ impl App {
             Msg::WsRequest(Request::SelectAccount { account })
         });
 
+        let account_details = self
+            .model
+            .accounts
+            .get(&self.model.selected_account.as_ref().unwrap_or_default())
+            .map(|s| s.email.clone());
+
+        let messages = if self.model.selected_chat_id.is_some() {
+            html! {
+              <div class="message-list-wrapper">
+                <Messages
+                   messages=self.model.messages.irc()
+                   messages_len=Irc::new(self.model.message_items.len())
+                   messages_range=self.model.messages_range.irc()
+                   selected_chat_id=self.model.selected_chat_id.irc()
+                   fetch_callback=messages_fetch_callback />
+                  <MessageInput send_callback=onsend />
+               </div>
+            }
+        } else {
+            html! {
+              <div>{"No chat selected"}</div>
+            }
+        };
+
         html! {
             <>
             { account_creation_modal }
               <div class="app">
                 <Sidebar
                   accounts=self.model.accounts.irc()
-                  selected_account=self.model.selected_account.irc(),
+                  selected_account=self.model.selected_account.irc()
                   select_account_callback=select_account_callback
                   create_account_callback=create_account_callback
                 />
                 <Chatlist
                   selected_account=self.model.selected_account.irc()
+                  selected_account_details=account_details
                   selected_chat_id=self.model.selected_chat_id.irc()
                   selected_chat=self.model.selected_chat.irc()
                   selected_chat_length=self.model.selected_chat_length.irc()
@@ -138,13 +172,7 @@ impl App {
                   }
                   </div>
 
-                  <Messages
-                   messages=self.model.messages.irc()
-                   messages_len=Irc::new(self.model.message_items.len())
-                   messages_range=self.model.messages_range.irc()
-                   selected_chat_id=self.model.selected_chat_id.irc()
-                   fetch_callback=messages_fetch_callback />
-                  <MessageInput send_callback=onsend />
+                  { messages }
                 </div>
             </div>
            </>
@@ -335,6 +363,12 @@ impl Component for App {
                 return true;
             }
             Msg::CancelAccountCreation => {
+                self.model.show_account_creation = false;
+                return true;
+            }
+            Msg::AccountCreation(email, password) => {
+                let msg = Msg::WsRequest(Request::Login { email, password });
+                self.link.send_message(msg);
                 self.model.show_account_creation = false;
                 return true;
             }

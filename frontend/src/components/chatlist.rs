@@ -1,4 +1,4 @@
-use shared::ChatState;
+use shared::{ChatState, SharedAccountState};
 use std::rc::Rc;
 use yew::{html, Callback, Component, ComponentLink, Html, Properties, ShouldRender};
 use yewtil::{ptr::Irc, NeqAssign};
@@ -7,11 +7,12 @@ use super::list::List;
 
 #[derive(Properties, Clone, PartialEq)]
 pub struct Props {
-    pub selected_account: Irc<Option<String>>,
+    pub selected_account: Irc<Option<u32>>,
+    pub selected_account_details: Option<String>,
     pub selected_chat_id: Irc<Option<u32>>,
     pub selected_chat: Irc<Option<ChatState>>,
     pub selected_chat_length: Irc<usize>,
-    pub select_chat_callback: Callback<(String, u32)>,
+    pub select_chat_callback: Callback<(u32, u32)>,
     pub chats: Irc<Vec<ChatState>>,
     pub chats_range: Irc<(usize, usize)>,
     pub chats_len: Irc<usize>,
@@ -67,7 +68,7 @@ impl Component for Chatlist {
             <div class="chats">
                 <div class="account-header">
                     <div class="account-info">
-                        {self.props.selected_account.clone_inner().unwrap_or_default()}
+                        {self.props.selected_account_details.clone().unwrap_or_default()}
                     </div>
                 </div>
                 <List<ChatState>

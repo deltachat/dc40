@@ -77,12 +77,12 @@ impl Component for Message {
                             let file_height = (*file_height).max(200);
                             html! {
                                 <div class="message-image">
-                                    <img
+                                  <img
                                     src={format!("asset://{}", file.display())}
-                                alt="image"
-                                    height={(file_height).min(400)}
-                                width="auto" />
-                                    </div>
+                                    alt="image"
+                                    height={(file_height).min(400).to_string()}
+                                    width="auto" />
+                                 </div>
                             }
                         } else {
                             html! {}
@@ -184,12 +184,12 @@ fn process_text(source: impl AsRef<str>) -> Html {
             match span.kind() {
                 Some(linkify::LinkKind::Url) => {
                     acc.add_child(html! {
-                        <a target="_blank" href=span.as_str()>{span.as_str()}</a>
+                        <a target="_blank" href=span.as_str().to_owned()>{span.as_str().to_owned()}</a>
                     });
                 }
                 Some(linkify::LinkKind::Email) => {
                     acc.add_child(html! {
-                        <a target="_blank" href=format!("mailto:{}", span.as_str())>{span.as_str()}</a>
+                        <a target="_blank" href=format!("mailto:{}", span.as_str().to_owned())>{span.as_str().to_owned()}</a>
                     });
                 }
                 None => acc.add_child(span.as_str().into()),
