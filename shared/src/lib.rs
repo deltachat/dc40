@@ -153,9 +153,6 @@ pub enum Request {
         email: String,
         password: String,
     },
-    Import {
-        path: String,
-    },
     SelectChat {
         account: u32,
         chat_id: u32,
@@ -188,6 +185,9 @@ pub enum Request {
     BlockContact {
         account: u32,
         chat_id: u32,
+    },
+    GetAccountDetail{
+        id: u32
     },
 }
 

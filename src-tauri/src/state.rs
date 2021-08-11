@@ -1,9 +1,9 @@
 use std::collections::HashMap;
 
 use anyhow::{anyhow, Result};
-use async_std::prelude::*;
 use async_std::sync::{Arc, RwLock};
 use async_std::task;
+use async_std::{path::Path, prelude::*};
 use async_tungstenite::tungstenite::{Error, Message};
 use broadcaster::BroadcastChannel;
 use deltachat::chat::{Chat, ChatId};
@@ -264,7 +264,6 @@ impl LocalState {
 
     pub async fn send_account_details<T>(
         &self,
-        ctx: &Context,
         id: u32,
         writer: Arc<RwLock<T>>,
     ) -> Result<()>
@@ -272,7 +271,9 @@ impl LocalState {
         T: futures::sink::Sink<Message> + Unpin + Sync + Send + 'static,
         T::Error: std::fmt::Debug + std::error::Error + Send + Sync,
     {
-        let ls = self.inner.read().await;
+        let ls = self.inner.write().await;
+        let ctx = ls.accounts.get_account(id).await.unwrap();
+
         ls.send_update(writer.clone()).await?;
 
         if let Some(account) = ls.account_states.get(&id) {
@@ -301,7 +302,7 @@ impl LocalState {
         Ok(())
     }
 
-    pub async fn import(&self, ctx: &Context, id: u32, path: &str) -> Result<()> {
+    pub async fn import(&self, ctx: &Context, id: u32, path: &Path) -> Result<()> {
         let res = self
             .inner
             .read()
@@ -309,7 +310,7 @@ impl LocalState {
             .account_states
             .get(&id)
             .unwrap()
-            .import(&ctx, &async_std::path::PathBuf::from(path))
+            .import(&ctx, path)
             .await;
         if let Err(err) = res {
             let mut ls = self.inner.write().await;

@@ -14,45 +14,50 @@ use shared::*;
 
 use dc40_backend::state::*;
 
+mod commands;
+
 fn main() {
     femme::with_level(log::LevelFilter::Info);
 
+    let local_state = task::block_on(async {
+        match LocalState::new().await {
+            Ok(local_state) => local_state,
+            Err(err) => panic!("Can't restore local state: {}", err),
+        }
+        //.expect(format!("Local state could not be restored: {}", err))
+    });
+
+    let local_state_clone = local_state.clone();
     std::thread::spawn(|| {
         let addr = "127.0.0.1:8080";
-
         task::block_on(async move {
             // Create the event loop and TCP listener we'll accept connections on.
             let try_socket = TcpListener::bind(&addr).await;
             let listener = try_socket.expect("Failed to bind");
             info!("Listening on: {}", addr);
 
-            match LocalState::new().await {
-                Ok(local_state) => {
-                    while let Ok((stream, _)) = listener.accept().await {
-                        let local_state = local_state.clone();
+            while let Ok((stream, _)) = listener.accept().await {
+                let local_state = local_state_clone.clone();
 
-                        task::spawn(async move {
-                            if let Err(err) = accept_connection(stream, local_state).await {
-                                if let Some(err) = err.downcast_ref::<Error>() {
-                                    match err {
-                                        Error::ConnectionClosed
-                                        | Error::Protocol(_)
-                                        | Error::Utf8 => {}
-                                        err => warn!("Error processing connection: {:?}", err),
-                                    }
-                                } else {
-                                    warn!("Error processing connection: {:?}", err);
-                                }
+                task::spawn(async move {
+                    if let Err(err) = accept_connection(stream, local_state).await {
+                        if let Some(err) = err.downcast_ref::<Error>() {
+                            match err {
+                                Error::ConnectionClosed | Error::Protocol(_) | Error::Utf8 => {}
+                                err => warn!("Error processing connection: {:?}", err),
                             }
-                        });
+                        } else {
+                            warn!("Error processing connection: {:?}", err);
+                        }
                     }
-                }
-                Err(err) => info!("Local state could not be restored: {}", err),
+                });
             }
         });
     });
 
     tauri::Builder::default()
+        .invoke_handler(tauri::generate_handler![commands::load_backup])
+        .manage(local_state)
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
@@ -108,7 +113,7 @@ async fn accept_connection(stream: TcpStream, local_state: LocalState) -> Result
 
 async fn process_request<T>(
     request: Request,
-    write: Arc<RwLock<T>>,
+    writer: Arc<RwLock<T>>,
     local_state: &LocalState,
 ) -> Result<()>
 where
@@ -123,32 +128,24 @@ where
             local_state.login(id, &ctx, &email, &password).await?;
 
             local_state
-                .send_account_details(&ctx, id, write.clone())
+                .send_account_details(id, writer.clone())
                 .await?;
         }
-        Request::Import { path } => {
-            let (id, ctx) = local_state.add_account().await?;
 
-            local_state.import(&ctx, id, &path).await?;
-
-            local_state
-                .send_account_details(&ctx, id, write.clone())
-                .await?;
-        }
         Request::SelectChat {
             account: id,
             chat_id,
         } => {
             let resp = local_state.select_chat(id, chat_id).await?;
-            local_state.send_update(write.clone()).await?;
-            send(write.clone(), resp).await?;
+            local_state.send_update(writer.clone()).await?;
+            send(writer.clone(), resp).await?;
         }
         Request::LoadChatList {
             start_index,
             stop_index,
         } => {
             let resp = local_state.load_chat_list(start_index, stop_index).await?;
-            send(write.clone(), resp).await?;
+            send(writer.clone(), resp).await?;
         }
         Request::LoadMessageList {
             start_index,
@@ -157,16 +154,16 @@ where
             let resp = local_state
                 .load_message_list(start_index, stop_index)
                 .await?;
-            send(write.clone(), resp).await?;
+            send(writer.clone(), resp).await?;
         }
         Request::SelectAccount { account } => {
             info!("selecting account {}", account);
             let resp = local_state.select_account(account).await?;
-            send(write.clone(), resp).await?;
+            send(writer.clone(), resp).await?;
         }
         Request::SendTextMessage { text } => {
             local_state.send_text_message(text).await?;
-            local_state.send_update(write.clone()).await?;
+            local_state.send_update(writer.clone()).await?;
         }
         Request::SendFileMessage {
             typ,
@@ -175,11 +172,10 @@ where
             mime,
         } => {
             local_state.send_file_message(typ, path, text, mime).await?;
-            local_state.send_update(write.clone()).await?;
+            local_state.send_update(writer.clone()).await?;
         }
         Request::MaybeNetwork => {
             info!("maybe network");
-
             local_state.maybe_network().await?;
         }
         Request::AcceptContactRequest {
@@ -196,6 +192,9 @@ where
             local_state.block_contact(id, chat_id).await?;
             local_state.send_update(write.clone()).await?;
         }
+        Request::GetAccountDetail {id} => {
+            local_state.send_account_details(id, writer).await?;
+        },
     }
     Ok(())
 }
