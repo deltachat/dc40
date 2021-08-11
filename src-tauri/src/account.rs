@@ -259,44 +259,50 @@ fn get_timestamp(ts: i64) -> DateTime<Utc> {
     DateTime::from_utc(naive, Utc)
 }
 
-async fn load_chat_state(context: Context, chat_id: ChatId) -> Result<(Chat, Option<ChatState>)> {
+async fn load_chat_state(
+    context: Context,
+    chat_id: ChatId,
+) -> Result<(Option<Chat>, Option<ChatState>)> {
     let chats = Chatlist::try_load(&context, 0, None, None)
         .await
         .map_err(|err| anyhow!("failed to load chats: {:?}", err))?;
 
-    let chat = Chat::load_from_db(&context, chat_id)
-        .await
-        .map_err(|err| anyhow!("failed to load chat: {:?}", err))?;
+    let (chat, chat_state) = if let Ok(chat) = Chat::load_from_db(&context, chat_id).await {
+        if let Some(index) = chats.get_index_for_id(chat_id) {
+            let lot = chats.get_summary(&context, index, Some(&chat)).await?;
 
-    let chat_state = if let Some(index) = chats.get_index_for_id(chat_id) {
-        let lot = chats.get_summary(&context, index, Some(&chat)).await?;
+            let header = lot.get_text1().map(|s| s.to_string()).unwrap_or_default();
+            let preview = lot.get_text2().map(|s| s.to_string()).unwrap_or_default();
 
-        let header = lot.get_text1().map(|s| s.to_string()).unwrap_or_default();
-        let preview = lot.get_text2().map(|s| s.to_string()).unwrap_or_default();
+            let index = chats.get_index_for_id(chat_id);
 
-        let index = chats.get_index_for_id(chat_id);
-
-        Some(ChatState {
-            id: chat_id.to_u32(),
-            index,
-            name: chat.get_name().to_string(),
-            header,
-            preview,
-            timestamp: get_timestamp(lot.get_timestamp()),
-            state: lot.get_state().to_string(),
-            profile_image: chat.get_profile_image(&context).await?.map(Into::into),
-            can_send: chat.can_send(&context).await,
-            chat_type: chat.get_type().to_string(),
-            color: chat.get_color(&context).await?,
-            is_device_talk: chat.is_device_talk(),
-            is_self_talk: chat.is_self_talk(),
-            fresh_msg_cnt: chat_id.get_fresh_msg_cnt(&context).await?,
-            member_count: deltachat::chat::get_chat_contacts(&context, chat_id)
-                .await?
-                .len(),
-        })
+            (
+                None,
+                Some(ChatState {
+                    id: chat_id.to_u32(),
+                    index,
+                    name: chat.get_name().to_string(),
+                    header,
+                    preview,
+                    timestamp: get_timestamp(lot.get_timestamp()),
+                    state: lot.get_state().to_string(),
+                    profile_image: chat.get_profile_image(&context).await?.map(Into::into),
+                    can_send: chat.can_send(&context).await,
+                    chat_type: chat.get_type().to_string(),
+                    color: chat.get_color(&context).await?,
+                    is_device_talk: chat.is_device_talk(),
+                    is_self_talk: chat.is_self_talk(),
+                    fresh_msg_cnt: chat_id.get_fresh_msg_cnt(&context).await?,
+                    member_count: deltachat::chat::get_chat_contacts(&context, chat_id)
+                        .await?
+                        .len(),
+                }),
+            )
+        } else {
+            (None, None)
+        }
     } else {
-        None
+        (None, None)
     };
 
     Ok((chat, chat_state))
