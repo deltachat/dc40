@@ -115,6 +115,24 @@ impl App {
             .get(&self.model.selected_account.as_ref().unwrap_or_default())
             .map(|s| s.email.clone());
 
+        let messages = if self.model.selected_chat_id.is_some() {
+            html! {
+              <div class="message-list-wrapper">
+                <Messages
+                   messages=self.model.messages.irc()
+                   messages_len=Irc::new(self.model.message_items.len())
+                   messages_range=self.model.messages_range.irc()
+                   selected_chat_id=self.model.selected_chat_id.irc()
+                   fetch_callback=messages_fetch_callback />
+                  <MessageInput send_callback=onsend />
+               </div>
+            }
+        } else {
+            html! {
+              <div>{"No chat selected"}</div>
+            }
+        };
+
         html! {
             <>
             { account_creation_modal }
@@ -154,13 +172,7 @@ impl App {
                   }
                   </div>
 
-                  <Messages
-                   messages=self.model.messages.irc()
-                   messages_len=Irc::new(self.model.message_items.len())
-                   messages_range=self.model.messages_range.irc()
-                   selected_chat_id=self.model.selected_chat_id.irc()
-                   fetch_callback=messages_fetch_callback />
-                  <MessageInput send_callback=onsend />
+                  { messages }
                 </div>
             </div>
            </>
