@@ -109,13 +109,40 @@ impl App {
             Msg::WsRequest(Request::SelectAccount { account })
         });
 
+        let selected_account = self.model.selected_account.as_ref().unwrap_or_default();
         let account_details = self
             .model
             .accounts
-            .get(&self.model.selected_account.as_ref().unwrap_or_default())
+            .get(&selected_account)
             .map(|s| s.email.clone());
 
         let messages = if self.model.selected_chat_id.is_some() {
+            let mut input = html! {
+              <MessageInput send_callback=onsend />
+            };
+            if let Some(chat) = &*self.model.selected_chat {
+                if chat.is_contact_request {
+                    let account = selected_account;
+                    let chat_id = chat.id;
+                    let accept_contact_request_callback = link.callback(move |_| {
+                        Msg::WsRequest(Request::AcceptContactRequest { account, chat_id })
+                    });
+                    let block_contact_callback = link.callback(move |_| {
+                        Msg::WsRequest(Request::BlockContact { account, chat_id })
+                    });
+
+                    input = html! {
+                      <div class="contact-request-buttons">
+                        <button class="block-button" onclick=block_contact_callback>
+                          {"Block"}
+                        </button>
+                        <button class="accept-button" onclick=accept_contact_request_callback>
+                          {"Accept"}
+                        </button>
+                      </div>
+                    };
+                }
+            }
             html! {
               <div class="message-list-wrapper">
                 <Messages
@@ -124,7 +151,7 @@ impl App {
                    messages_range=self.model.messages_range.irc()
                    selected_chat_id=self.model.selected_chat_id.irc()
                    fetch_callback=messages_fetch_callback />
-                  <MessageInput send_callback=onsend />
+                { input }
                </div>
             }
         } else {
@@ -396,7 +423,9 @@ fn get_titles(chat: &ChatState) -> (String, String) {
     } else {
         let title = chat.name.to_string();
 
-        let subtitle = if chat.chat_type == "Group" || chat.chat_type == "VerifiedGroup" {
+        let subtitle = if chat.is_contact_request {
+            "Contact Request".to_string()
+        } else if chat.chat_type == "Group" || chat.chat_type == "VerifiedGroup" {
             if chat.member_count == 1 {
                 "1 member".to_string()
             } else {

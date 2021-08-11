@@ -117,6 +117,7 @@ pub struct ChatState {
     pub profile_image: Option<PathBuf>,
     pub fresh_msg_cnt: usize,
     pub can_send: bool,
+    pub is_contact_request: bool,
     pub is_self_talk: bool,
     pub is_device_talk: bool,
     pub chat_type: String,
@@ -178,6 +179,14 @@ pub enum Request {
         mime: Option<String>,
     },
     MaybeNetwork,
+    AcceptContactRequest {
+        account: u32,
+        chat_id: u32,
+    },
+    BlockContact {
+        account: u32,
+        chat_id: u32,
+    },
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, FromPrimitive, ToPrimitive)]

@@ -245,6 +245,16 @@ impl Account {
 
         Ok(())
     }
+
+    pub async fn accept_contact_request(&self, context: &Context, chat_id: ChatId) -> Result<()> {
+        chat_id.accept(&context).await?;
+        Ok(())
+    }
+
+    pub async fn block_contact(&self, context: &Context, chat_id: ChatId) -> Result<()> {
+        chat_id.block(&context).await?;
+        Ok(())
+    }
 }
 
 #[derive(Debug, Serialize)]
@@ -275,6 +285,7 @@ async fn load_chat_state(
             let preview = lot.get_text2().map(|s| s.to_string()).unwrap_or_default();
 
             let index = chats.get_index_for_id(chat_id);
+            let is_contact_request = chat.is_contact_request();
 
             (
                 None,
@@ -288,6 +299,7 @@ async fn load_chat_state(
                     state: lot.get_state().to_string(),
                     profile_image: chat.get_profile_image(&context).await?.map(Into::into),
                     can_send: chat.can_send(&context).await,
+                    is_contact_request,
                     chat_type: chat.get_type().to_string(),
                     color: chat.get_color(&context).await?,
                     is_device_talk: chat.is_device_talk(),

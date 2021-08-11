@@ -285,3 +285,26 @@
     }
   }
 }
+
+.contact-request-buttons {
+  display: flex;
+  flex-direction: row;
+  margin: 10px;
+
+  button {
+    outline: none;
+    border: none;
+    color: #FFF;
+    background-color: $darkBlue;
+    font-weight: 300;
+    font-size: 18px;
+    border-radius: 5px;
+
+    transition: all 0.2s linear;
+
+    &:hover {
+      cursor: pointer;
+      background-color: $hoverBlue;
+    }
+  }
+}

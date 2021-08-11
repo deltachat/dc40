@@ -367,6 +367,32 @@ impl LocalState {
         }
     }
 
+    pub async fn accept_contact_request(&self, account_id: u32, chat_id: u32) -> Result<()> {
+        let ls = self.inner.write().await;
+        if let Some(account) = ls.account_states.get(&account_id) {
+            let ctx = ls.accounts.get_account(account_id).await.unwrap();
+            let chat = ChatId::new(chat_id);
+            account.accept_contact_request(&ctx, chat).await?;
+
+            Ok(())
+        } else {
+            Err(anyhow!("invalid account: {}-{}", account_id, chat_id))
+        }
+    }
+
+    pub async fn block_contact(&self, account_id: u32, chat_id: u32) -> Result<()> {
+        let ls = self.inner.write().await;
+        if let Some(account) = ls.account_states.get(&account_id) {
+            let ctx = ls.accounts.get_account(account_id).await.unwrap();
+            let chat = ChatId::new(chat_id);
+            account.block_contact(&ctx, chat).await?;
+
+            Ok(())
+        } else {
+            Err(anyhow!("invalid account: {}-{}", account_id, chat_id))
+        }
+    }
+
     pub async fn load_chat_list(&self, start_index: usize, stop_index: usize) -> Result<Response> {
         let ls = self.inner.read().await;
         if let Some((account, ctx)) = ls.get_selected_account().await {
