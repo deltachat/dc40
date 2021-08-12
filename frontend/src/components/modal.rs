@@ -3,14 +3,18 @@ use std::collections::HashMap;
 use log::*;
 use shared::{ChatState, SharedAccountState};
 use validator::{Validate, ValidationError};
+use wasm_bindgen_futures::JsFuture;
 use yew::{html, Callback, Component, ComponentLink, Html, MouseEvent, Properties, ShouldRender};
 use yew_form::{Field, Form};
-use yewtil::{ptr::Irc, NeqAssign};
+use yewtil::{NeqAssign, future::LinkFuture, ptr::Irc};
+use wasm_bindgen::prelude::*;
+
 
 #[derive(Properties, Clone, PartialEq)]
 pub struct Props {
     pub submit_callback: Callback<(String, String)>,
     pub cancel_callback: Callback<()>,
+    pub import_callback: Callback<(u32)>
 }
 
 pub struct Modal {
@@ -40,6 +44,14 @@ impl Default for Login {
 pub enum Msg {
     FormUpdate,
     Submit,
+    Import(u32),
+    RequestImport,
+}
+
+
+#[wasm_bindgen(module = "/src/js/tauri_wrapper.js")]
+extern "C" {
+  async fn invoke_backup_import() -> JsValue;
 }
 
 impl Component for Modal {
@@ -66,6 +78,20 @@ impl Component for Modal {
                 ));
                 true
             }
+            Msg::Import(id)=> {
+              info!("requesting account-data for account with id: {}", id);
+              self.props.import_callback.emit(id);
+              self.props.cancel_callback.emit(());
+              true
+            },
+            Msg::RequestImport => {
+
+              self.link.send_future(async {
+                let t = unsafe {invoke_backup_import().await};
+                Msg::Import(t.as_f64().unwrap() as u32)
+              });
+              false
+            },
         }
     }
 
@@ -80,6 +106,8 @@ impl Component for Modal {
             Msg::Submit
         });
         let cancel: Callback<_> = (move |_| cb.emit(())).into();
+        
+        let import = self.link.callback(|_| Msg::RequestImport);
 
         html! {
           <div class="modal-window">
@@ -121,7 +149,9 @@ impl Component for Modal {
                   </button>
                 </div>
               </form>
-            </div>
+              <p class="or-spacer">{"--- or ---"}</p>
+              <button class="submit-button" onclick=import id="acc_import_button">{"Import Backup"}</button>
+              </div>
           </div>
         }
     }

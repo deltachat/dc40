@@ -95,9 +95,15 @@ impl App {
         let submit_account_create_callback =
             link.callback(move |(email, password)| Msg::AccountCreation(email, password));
 
+        let import_callback = link.callback(move |id| {
+            Msg::WsRequest(Request::GetAccountDetail{id})
+        
+        });
+
         let account_creation_modal = if self.model.show_account_creation {
             html! {
                 <Modal
+                import_callback=import_callback
                  submit_callback=submit_account_create_callback
                  cancel_callback=cancel_account_create_callback />
             }

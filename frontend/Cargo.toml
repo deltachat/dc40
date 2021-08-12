@@ -13,7 +13,9 @@ strum = "0.20"
 strum_macros = "0.20"
 serde = { version = "1", features = ["derive"] }
 wasm-bindgen = "0.2.58"
+wasm-bindgen-futures = "*"
 wasm-logger = "0.2"
+js-sys = "*"
 wee_alloc = { version = "0.4.4", optional = true }
 yew = { version = "0.18", features = ["bincode"] }
 anyhow = "1.0.32"
@@ -25,6 +27,7 @@ yew_form = { git = "https://github.com/dignifiedquire/yew_form", branch = "yew-1
 yew_form_derive = { git = "https://github.com/dignifiedquire/yew_form", branch = "yew-18"}
 validator = "0.14"
 validator_derive = "0.14"
+
 
 [dependencies.web-sys]
 version = "0.3.4"
