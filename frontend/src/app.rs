@@ -114,7 +114,7 @@ impl App {
             .model
             .accounts
             .get(&selected_account)
-            .map(|s| s.email.clone());
+            .map(|s| s.clone());
 
         let messages = if self.model.selected_chat_id.is_some() {
             let mut input = html! {

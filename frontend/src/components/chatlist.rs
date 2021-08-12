@@ -8,7 +8,7 @@ use super::list::List;
 #[derive(Properties, Clone, PartialEq)]
 pub struct Props {
     pub selected_account: Irc<Option<u32>>,
-    pub selected_account_details: Option<String>,
+    pub selected_account_details: Option<SharedAccountState>,
     pub selected_chat_id: Irc<Option<u32>>,
     pub selected_chat: Irc<Option<ChatState>>,
     pub selected_chat_length: Irc<usize>,
@@ -64,11 +64,25 @@ impl Component for Chatlist {
                 }
             });
 
+        let mut email = html! {};
+        let mut name = html! {};
+        if let Some(ref details) = self.props.selected_account_details {
+            if let Some(ref display_name) = details.display_name {
+                name = html! {
+                    <div>{display_name}</div>
+                };
+            }
+
+            email = html! {
+                <div>{details.email.clone()}</div>
+            };
+        };
         html! {
             <div class="chats">
                 <div class="account-header">
                     <div class="account-info">
-                        {self.props.selected_account_details.clone().unwrap_or_default()}
+                        {name}
+                        {email}
                     </div>
                 </div>
                 <List<ChatState>

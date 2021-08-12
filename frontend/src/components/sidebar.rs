@@ -36,6 +36,8 @@ impl Component for Sidebar {
     fn view(&self) -> Html {
         let cb = self.props.create_account_callback.clone();
         let onclick: Callback<_> = (move |_| cb.emit(())).into();
+        let selected_account = self.props.selected_account.unwrap_or_default();
+
         html! {
             <div class="sidebar">
                 <div class="account-list">
@@ -43,11 +45,30 @@ impl Component for Sidebar {
                         let cb = self.props.select_account_callback.clone();
                         let id = *id;
                         let onclick: Callback<_> = (move |_| cb.emit(id)).into();
+                        let mut cls = "account".to_string();
+                        if id == selected_account {
+                            cls += " active";
+                        }
+                        let image = if let Some(ref profile_image) = acc.profile_image {
+                            let src = format!("asset://{}", profile_image.to_string_lossy());
+
+                            html! {
+                                <img
+                                 class="image-icon"
+                                 src=src
+                                 alt="chat avatar" />
+                            }
+                        } else {
+                            html! {
+                              <div class="letter-icon">
+                                {acc.email.chars().next().unwrap_or_default()}
+                              </div>
+                            }
+                        };
+
                         html! {
-                            <div class="account" onclick=onclick>
-                                <div class="letter-icon" >
-                                    {acc.email.chars().next().unwrap()}
-                                </div>
+                            <div class=cls onclick=onclick>
+                                {image}
                             </div>
                         }
                     }).collect::<Html>() }

@@ -143,6 +143,8 @@ impl Default for Login {
 pub struct SharedAccountState {
     pub logged_in: Login,
     pub email: String,
+    pub profile_image: Option<PathBuf>,
+    pub display_name: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]

@@ -578,16 +578,23 @@ impl LocalStateInner {
         for (id, account) in self.account_states.iter() {
             let account = &account.state.read().await;
             let ctx = self.accounts.get_account(*id).await.unwrap();
-            let email = ctx
-                .get_config(deltachat::config::Config::Addr)
+
+            use deltachat::config::Config;
+            let email = ctx.get_config(Config::Addr).await.unwrap().unwrap();
+            let profile_image = ctx
+                .get_config(Config::Selfavatar)
                 .await
                 .unwrap()
-                .unwrap();
+                .map(Into::into);
+            let display_name = ctx.get_config(Config::Displayname).await.unwrap();
+
             accounts.insert(
                 *id,
                 SharedAccountState {
                     logged_in: account.logged_in.clone(),
                     email,
+                    profile_image,
+                    display_name,
                 },
             );
         }
