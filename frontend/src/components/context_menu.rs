@@ -2,7 +2,6 @@
 
 use std::{collections::HashMap, convert::TryInto, time::Duration};
 
-use log::*;
 use wasm_bindgen::{prelude::Closure, JsCast};
 use web_sys::HtmlElement;
 use yew::{
@@ -78,11 +77,6 @@ impl Component for ContextMenu {
                     y -= y + menu_height - window_height;
                 }
 
-                info!(
-                    "{} {} {} {} {} {}",
-                    window_width, window_height, menu_width, menu_height, x, y
-                );
-
                 let should_update = self.show_menu == false || self.x != x || self.y != y;
                 self.show_menu = true;
                 self.x = x;
@@ -92,16 +86,13 @@ impl Component for ContextMenu {
                     self.timeout =
                         Some(TimeoutService::spawn(Duration::from_secs(0), add_callback));
                 }
-                info!("Right click");
                 should_update
             }
             Msg::AddEventListeners => {
-                info!("add event listeners");
                 self.add_event_listeners();
                 false
             }
             Msg::Hide => {
-                info!("hide");
                 let should_update = self.show_menu == true;
                 self.show_menu = false;
                 if should_update {
@@ -172,10 +163,7 @@ impl ContextMenu {
     }
 
     fn add_event_listeners(&mut self) {
-        let onclick = self.link.callback(|e: MouseEvent| {
-            // TODO: check if inside
-            Msg::Hide
-        });
+        let onclick = self.link.callback(|_e: MouseEvent| Msg::Hide);
         let onclick =
             Closure::wrap(Box::new(move |ev: MouseEvent| onclick.emit(ev.into()))
                 as Box<dyn FnMut(MouseEvent)>);
