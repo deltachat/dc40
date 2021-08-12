@@ -13,10 +13,7 @@ use yewtil::{
 use shared::*;
 
 use crate::components::{
-    chatlist::Chatlist,
-    message_input::MessageInput,
-    messages::Messages,
-    modal::{Login, Modal},
+    chatlist::Chatlist, message_input::MessageInput, messages::Messages, modal::Modal,
     sidebar::Sidebar,
 };
 
@@ -95,10 +92,8 @@ impl App {
         let submit_account_create_callback =
             link.callback(move |(email, password)| Msg::AccountCreation(email, password));
 
-        let import_callback = link.callback(move |id| {
-            Msg::WsRequest(Request::GetAccountDetail{id})
-        
-        });
+        let import_callback =
+            link.callback(move |id| Msg::WsRequest(Request::GetAccountDetail { id }));
 
         let account_creation_modal = if self.model.show_account_creation {
             html! {
@@ -236,7 +231,7 @@ impl Component for App {
                         WebSocketStatus::Closed | WebSocketStatus::Error => WsAction::Lost.into(),
                     });
                     let task = WebSocketService::connect_binary(
-                        "ws://localhost:8080/",
+                        "ws://localhost:8081/",
                         callback,
                         notification,
                     )
@@ -365,7 +360,7 @@ impl Component for App {
                                 self.link.send_message_batch(messages);
                             }
                             Event::Log(log) => match log {
-                                shared::Log::Info(msg) => {
+                                shared::Log::Info(_msg) => {
                                     // info!("[{}]: {:?}", account, msg);
                                 }
                                 shared::Log::Warning(msg) => {

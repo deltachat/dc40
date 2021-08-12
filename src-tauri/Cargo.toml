@@ -1,14 +1,15 @@
 [package]
 name = "dc40-backend"
 version = "0.1.0"
-authors = ["dignifiedquire <me@dignifiedquire.com>"]
-edition = "2018"
 description = "dc40"
-
-default-run = "dc40-backend"
-build = "src/build.rs"
+authors = ["dignifiedquire <me@dignifiedquire.com>"]
+license = ""
+repository = ""
+default-run = "app"
+edition = "2018"
 
 [dependencies]
+tauri = { version = "1.0.0-beta.5", features = ["api-all", "dialog-open", "dialog-save"] }
 shared = { path = "../shared", package = "dc40-shared" }
 deltachat = { git = "https://github.com/deltachat/deltachat-core-rust", branch = "master"}
 async-std = "~1.9.0"
@@ -23,11 +24,17 @@ dirs = "3.0"
 lazy_static = "1.4.0"
 glob = "0.3.0"
 num-traits = "0.2.12"
-tauri = { git="https://github.com/tauri-apps/tauri.git", branch="dev", features = ["api-all", "custom-protocol", "dialog-open", "dialog-save"] }
 chrono = "0.4.15"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 static_assertions = "1.1.0"
 
 [build-dependencies]
-tauri-build = { version = "1.0.0-beta.3" }
+tauri-build = "1.0.0-beta.3"
+
+[features]
+default = []
+
+[[bin]]
+name = "app"
+path = "src/main.rs"

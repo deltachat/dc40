@@ -8,13 +8,10 @@ use async_std::net::{TcpListener, TcpStream};
 use async_std::sync::{Arc, RwLock};
 use async_std::task;
 use async_tungstenite::tungstenite::{Error, Message};
+use dc40_backend::{commands, state::*};
 use futures::StreamExt;
 use log::{info, warn};
 use shared::*;
-
-use dc40_backend::state::*;
-
-mod commands;
 
 fn main() {
     femme::with_level(log::LevelFilter::Info);
@@ -29,7 +26,8 @@ fn main() {
 
     let local_state_clone = local_state.clone();
     std::thread::spawn(|| {
-        let addr = "127.0.0.1:8080";
+        let addr = "127.0.0.1:8081";
+
         task::block_on(async move {
             // Create the event loop and TCP listener we'll accept connections on.
             let try_socket = TcpListener::bind(&addr).await;
@@ -127,9 +125,7 @@ where
 
             local_state.login(id, &ctx, &email, &password).await?;
 
-            local_state
-                .send_account_details(id, writer.clone())
-                .await?;
+            local_state.send_account_details(id, writer.clone()).await?;
         }
 
         Request::SelectChat {
@@ -192,9 +188,9 @@ where
             local_state.block_contact(id, chat_id).await?;
             local_state.send_update(writer.clone()).await?;
         }
-        Request::GetAccountDetail {id} => {
+        Request::GetAccountDetail { id } => {
             local_state.send_account_details(id, writer).await?;
-        },
+        }
     }
     Ok(())
 }

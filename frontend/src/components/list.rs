@@ -116,7 +116,7 @@ impl<T: Clone + PartialEq + 'static> Component for List<T> {
                     // distance to currently loaded top end
                     let from_top = el.scroll_top();
                     // distance to currently loaded bottom end
-                    let from_bottom = el.scroll_height() - el.scroll_top();
+                    let _from_bottom = el.scroll_height() - el.scroll_top();
                     self.scroll = (el.scroll_top(), el.scroll_height() - el.client_height());
 
                     // element.scrollHeight - element.scrollTop === element.clientHeight

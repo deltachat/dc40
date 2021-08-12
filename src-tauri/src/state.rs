@@ -262,11 +262,7 @@ impl LocalState {
         Ok(())
     }
 
-    pub async fn send_account_details<T>(
-        &self,
-        id: u32,
-        writer: Arc<RwLock<T>>,
-    ) -> Result<()>
+    pub async fn send_account_details<T>(&self, id: u32, writer: Arc<RwLock<T>>) -> Result<()>
     where
         T: futures::sink::Sink<Message> + Unpin + Sync + Send + 'static,
         T::Error: std::fmt::Debug + std::error::Error + Send + Sync,
