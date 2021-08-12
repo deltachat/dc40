@@ -5,6 +5,7 @@ use async_std::path::{Path, PathBuf};
 use async_std::prelude::*;
 use async_std::sync::{Arc, RwLock};
 use chrono::prelude::*;
+use deltachat::chat::ChatVisibility;
 use deltachat::{
     chat::{self, Chat, ChatId},
     chatlist::Chatlist,
@@ -177,6 +178,45 @@ impl Account {
 
         Ok(())
     }
+    pub async fn pin_chat(&self, context: &Context, chat_id: ChatId) -> Result<()> {
+        info!("pinning chat: {:?}", chat_id);
+
+        chat_id
+            .set_visibility(context, ChatVisibility::Pinned)
+            .await?;
+
+        Ok(())
+    }
+
+    pub async fn unpin_chat(&self, context: &Context, chat_id: ChatId) -> Result<()> {
+        info!("unpinning chat: {:?}", chat_id);
+
+        chat_id
+            .set_visibility(context, ChatVisibility::Normal)
+            .await?;
+
+        Ok(())
+    }
+
+    pub async fn archive_chat(&self, context: &Context, chat_id: ChatId) -> Result<()> {
+        info!("archiving chat: {:?}", chat_id);
+
+        chat_id
+            .set_visibility(context, ChatVisibility::Archived)
+            .await?;
+
+        Ok(())
+    }
+
+    pub async fn unarchive_chat(&self, context: &Context, chat_id: ChatId) -> Result<()> {
+        info!("unarchiving chat: {:?}", chat_id);
+
+        chat_id
+            .set_visibility(context, ChatVisibility::Normal)
+            .await?;
+
+        Ok(())
+    }
 
     pub async fn load_message_list(
         &self,
@@ -308,6 +348,8 @@ async fn load_chat_state(
                     member_count: deltachat::chat::get_chat_contacts(&context, chat_id)
                         .await?
                         .len(),
+                    is_pinned: chat.get_visibility() == ChatVisibility::Pinned,
+                    is_archived: chat.get_visibility() == ChatVisibility::Archived,
                 }),
             )
         } else {

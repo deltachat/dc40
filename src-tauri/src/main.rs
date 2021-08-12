@@ -136,6 +136,38 @@ where
             local_state.send_update(writer.clone()).await?;
             send(writer.clone(), resp).await?;
         }
+        Request::PinChat {
+            account: id,
+            chat_id,
+        } => {
+            let resp = local_state.pin_chat(id, chat_id).await?;
+            local_state.send_update(writer.clone()).await?;
+            send(writer.clone(), resp).await?;
+        }
+        Request::UnpinChat {
+            account: id,
+            chat_id,
+        } => {
+            let resp = local_state.unpin_chat(id, chat_id).await?;
+            local_state.send_update(writer.clone()).await?;
+            send(writer.clone(), resp).await?;
+        }
+        Request::ArchiveChat {
+            account: id,
+            chat_id,
+        } => {
+            let resp = local_state.archive_chat(id, chat_id).await?;
+            local_state.send_update(writer.clone()).await?;
+            send(writer.clone(), resp).await?;
+        }
+        Request::UnarchiveChat {
+            account: id,
+            chat_id,
+        } => {
+            let resp = local_state.unarchive_chat(id, chat_id).await?;
+            local_state.send_update(writer.clone()).await?;
+            send(writer.clone(), resp).await?;
+        }
         Request::LoadChatList {
             start_index,
             stop_index,

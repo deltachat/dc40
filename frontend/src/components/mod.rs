@@ -6,3 +6,5 @@ pub mod sidebar;
 
 pub mod list;
 pub mod modal;
+
+pub mod context_menu;

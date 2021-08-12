@@ -86,6 +86,21 @@ impl App {
             Msg::WsRequest(Request::SelectChat { account, chat_id })
         });
 
+        let pin_chat_callback = link.callback(move |(account, chat_id)| {
+            Msg::WsRequest(Request::PinChat { account, chat_id })
+        });
+
+        let unpin_chat_callback = link.callback(move |(account, chat_id)| {
+            Msg::WsRequest(Request::UnpinChat { account, chat_id })
+        });
+        let archive_chat_callback = link.callback(move |(account, chat_id)| {
+            Msg::WsRequest(Request::ArchiveChat { account, chat_id })
+        });
+
+        let unarchive_chat_callback = link.callback(move |(account, chat_id)| {
+            Msg::WsRequest(Request::UnarchiveChat { account, chat_id })
+        });
+
         let create_account_callback = link.callback(move |_| Msg::ShowAccountCreation);
         let cancel_account_create_callback = link.callback(move |_| Msg::CancelAccountCreation);
 
@@ -178,6 +193,10 @@ impl App {
                   selected_chat=self.model.selected_chat.irc()
                   selected_chat_length=self.model.selected_chat_length.irc()
                   select_chat_callback=select_chat_callback
+                  pin_chat_callback=pin_chat_callback
+                  unpin_chat_callback=unpin_chat_callback
+                  archive_chat_callback=archive_chat_callback
+                  unarchive_chat_callback=unarchive_chat_callback
                   chats=self.model.chats.irc()
                   chats_range=self.model.chats_range.irc()
                   chats_len=self.model.chats_len.irc()

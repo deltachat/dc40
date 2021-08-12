@@ -1,8 +1,10 @@
 use shared::{ChatState, SharedAccountState};
+use std::collections::HashMap;
 use std::rc::Rc;
 use yew::{html, Callback, Component, ComponentLink, Html, Properties, ShouldRender};
 use yewtil::{ptr::Irc, NeqAssign};
 
+use super::context_menu::ContextMenu;
 use super::list::List;
 
 #[derive(Properties, Clone, PartialEq)]
@@ -13,6 +15,10 @@ pub struct Props {
     pub selected_chat: Irc<Option<ChatState>>,
     pub selected_chat_length: Irc<usize>,
     pub select_chat_callback: Callback<(u32, u32)>,
+    pub pin_chat_callback: Callback<(u32, u32)>,
+    pub unpin_chat_callback: Callback<(u32, u32)>,
+    pub archive_chat_callback: Callback<(u32, u32)>,
+    pub unarchive_chat_callback: Callback<(u32, u32)>,
     pub chats: Irc<Vec<ChatState>>,
     pub chats_range: Irc<(usize, usize)>,
     pub chats_len: Irc<usize>,
@@ -47,6 +53,11 @@ impl Component for Chatlist {
             .clone_inner()
             .unwrap_or_default();
         let cb = self.props.select_chat_callback.clone();
+        let pin_cb = self.props.pin_chat_callback.clone();
+        let unpin_cb = self.props.unpin_chat_callback.clone();
+        let archive_cb = self.props.archive_chat_callback.clone();
+        let unarchive_cb = self.props.unarchive_chat_callback.clone();
+
         let selected_chat_id = self.props.selected_chat_id.clone();
 
         let render_element: Rc<dyn Fn(ChatState) -> Html> =
@@ -56,11 +67,42 @@ impl Component for Chatlist {
                 let account = account.clone();
                 let callback: Callback<_> = (move |_| cb.emit((account.clone(), chat_id))).into();
 
+                let mut actions = HashMap::new();
+                if chat.is_pinned {
+                    let unpin_cb = unpin_cb.clone();
+                    let unpin_callback: Callback<()> =
+                        (move |_| unpin_cb.emit((account.clone(), chat_id))).into();
+
+                    actions.insert("Unpin".to_string(), unpin_callback);
+                } else {
+                    let pin_cb = pin_cb.clone();
+                    let pin_callback: Callback<()> =
+                        (move |_| pin_cb.emit((account.clone(), chat_id))).into();
+
+                    actions.insert("Pin".to_string(), pin_callback);
+                }
+
+                if chat.is_archived {
+                    let unarchive_cb = unarchive_cb.clone();
+                    let unarchive_callback: Callback<()> =
+                        (move |_| unarchive_cb.emit((account.clone(), chat_id))).into();
+
+                    actions.insert("Unarchive".to_string(), unarchive_callback);
+                } else {
+                    let archive_cb = archive_cb.clone();
+                    let archive_callback: Callback<()> =
+                        (move |_| archive_cb.emit((account.clone(), chat_id))).into();
+
+                    actions.insert("Archive".to_string(), archive_callback);
+                }
+
                 html! {
-                    <Chat
-                     chat=chat.clone()
-                     selected_chat_id=selected_chat_id.clone()
-                     select_callback=callback />
+                    <ContextMenu actions=actions>
+                      <Chat
+                        chat=chat.clone()
+                        selected_chat_id=selected_chat_id.clone()
+                        select_callback=callback />
+                    </ContextMenu>
                 }
             });
 

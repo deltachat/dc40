@@ -125,6 +125,8 @@ pub struct ChatState {
     pub chat_type: String,
     pub color: u32,
     pub member_count: usize,
+    pub is_pinned: bool,
+    pub is_archived: bool,
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone)]
@@ -190,6 +192,22 @@ pub enum Request {
     },
     GetAccountDetail {
         id: u32,
+    },
+    PinChat {
+        account: u32,
+        chat_id: u32,
+    },
+    UnpinChat {
+        account: u32,
+        chat_id: u32,
+    },
+    ArchiveChat {
+        account: u32,
+        chat_id: u32,
+    },
+    UnarchiveChat {
+        account: u32,
+        chat_id: u32,
     },
 }
 
