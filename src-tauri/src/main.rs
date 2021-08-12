@@ -183,14 +183,14 @@ where
             chat_id,
         } => {
             local_state.accept_contact_request(id, chat_id).await?;
-            local_state.send_update(write.clone()).await?;
+            local_state.send_update(writer.clone()).await?;
         }
         Request::BlockContact {
             account: id,
             chat_id,
         } => {
             local_state.block_contact(id, chat_id).await?;
-            local_state.send_update(write.clone()).await?;
+            local_state.send_update(writer.clone()).await?;
         }
         Request::GetAccountDetail {id} => {
             local_state.send_account_details(id, writer).await?;
