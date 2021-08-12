@@ -105,7 +105,8 @@ impl Component for Modal {
         html! {
           <div class="modal-window">
             <div class="account-create">
-              <h1>{"Login"}</h1>
+              <h1>{"Add Acccount"}</h1>
+              <div class="login">
               <form>
                 <div class="form-group">
                   <label for="email">{"Email"}</label>
@@ -142,8 +143,11 @@ impl Component for Modal {
                   </button>
                 </div>
               </form>
+              </div>
               <p class="or-spacer">{"--- or ---"}</p>
+              <div class="import">
               <button class="submit-button" onclick=import id="acc_import_button">{"Import Backup"}</button>
+              </div>
               </div>
           </div>
         }
