@@ -23,6 +23,8 @@ pub enum Response {
     },
     Account {
         account: u32,
+        chat: Option<ChatState>,
+        chat_id: Option<u32>,
     },
     Event {
         account: u32,
@@ -186,8 +188,8 @@ pub enum Request {
         account: u32,
         chat_id: u32,
     },
-    GetAccountDetail{
-        id: u32
+    GetAccountDetail {
+        id: u32,
     },
 }
 

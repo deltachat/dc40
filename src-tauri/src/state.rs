@@ -411,18 +411,9 @@ impl LocalState {
         }
     }
 
-    pub async fn load_message_list(
-        &self,
-        start_index: usize,
-        stop_index: usize,
-    ) -> Result<Response> {
+    pub async fn load_message_list(&self, range: Option<(usize, usize)>) -> Result<Response> {
         let ls = self.inner.read().await;
         if let Some((account, ctx)) = ls.get_selected_account().await {
-            let range = if start_index == 0 && stop_index == 0 {
-                None
-            } else {
-                Some((start_index, stop_index))
-            };
             let (chat_id, range, items, messages) = account.load_message_list(&ctx, range).await?;
 
             Ok(Response::MessageList {
@@ -439,9 +430,17 @@ impl LocalState {
     pub async fn select_account(&self, account_id: u32) -> Result<Response> {
         let mut ls = self.inner.write().await;
         ls.select_account(account_id).await?;
-        Ok(Response::Account {
-            account: account_id,
-        })
+        if let Some((account, _ctx)) = ls.get_selected_account().await {
+            let state = account.state.read().await;
+
+            Ok(Response::Account {
+                account: account_id,
+                chat_id: state.selected_chat_id.map(|id| id.to_u32()),
+                chat: state.selected_chat.as_ref().cloned(),
+            })
+        } else {
+            Err(anyhow!("failed to select account"))
+        }
     }
 
     pub async fn send_text_message(&self, text: String) -> Result<()> {

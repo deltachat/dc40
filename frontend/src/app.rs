@@ -282,8 +282,14 @@ impl Component for App {
                         self.model.chats.neq_assign(chats);
                         return true;
                     }
-                    Response::Account { account } => {
+                    Response::Account {
+                        account,
+                        chat,
+                        chat_id,
+                    } => {
                         self.model.selected_account.neq_assign(Some(account));
+                        self.model.selected_chat.neq_assign(chat);
+                        self.model.selected_chat_id.neq_assign(chat_id);
 
                         let message = Msg::WsRequest(Request::LoadChatList {
                             start_index: 0,

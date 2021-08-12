@@ -148,13 +148,17 @@ where
             stop_index,
         } => {
             let resp = local_state
-                .load_message_list(start_index, stop_index)
+                .load_message_list(Some((start_index, stop_index)))
                 .await?;
             send(writer.clone(), resp).await?;
         }
         Request::SelectAccount { account } => {
             info!("selecting account {}", account);
             let resp = local_state.select_account(account).await?;
+            send(writer.clone(), resp).await?;
+
+            // TODO: store indicies
+            let resp = local_state.load_message_list(None).await?;
             send(writer.clone(), resp).await?;
         }
         Request::SendTextMessage { text } => {
