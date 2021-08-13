@@ -173,11 +173,11 @@ body {
       height: 32px;
       width: 32px;
       overflow: hidden;
-      margin: 20px 3px 3px 3px;
       background-color: #162743;
       display: flex;
-      align-items: stretch;
       transition: background-color 0.3s ease;
+      align-self: center;
+      margin-left: 9px;
 
       .letter-icon {
         line-height: 32px;
