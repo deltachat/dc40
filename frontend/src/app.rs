@@ -111,6 +111,11 @@ impl App {
         let import_callback =
             link.callback(move |id| Msg::WsRequest(Request::GetAccountDetail { id }));
 
+        let select_account_callback = link.callback(move |account| {
+            info!("Account switched {}", account);
+            Msg::WsRequest(Request::SelectAccount { account })
+        });
+
         let account_creation_modal = if self.model.show_account_creation {
             html! {
                 <Modal
