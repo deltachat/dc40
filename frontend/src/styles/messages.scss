@@ -117,9 +117,11 @@
       align-items: stretch;
 
       .letter-icon {
+        line-height: 30px;
         flex: 1;
         font-size: 20px;
         padding: 0;
+        color: white;
       }
 
       img {
