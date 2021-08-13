@@ -21,3 +21,5 @@ yarn-error.log*
 .idea
 
 target
+
+shared/Cargo.lock
