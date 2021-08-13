@@ -155,7 +155,7 @@ impl Account {
         let mut chats = Vec::with_capacity(len);
         for i in start_index..=stop_index {
             let chat_id = chatlist.get_chat_id(i);
-            let (_, chat_state) = load_chat_state(context.clone(), chat_id).await?;
+            let (_, chat_state) = load_chat_state(context.clone(), chat_id, &chatlist).await?;
             if let Some(s) = chat_state {
                 chats.push(s);
             }
@@ -168,7 +168,10 @@ impl Account {
         info!("selecting chat {:?}", chat_id);
         let mut ls = self.state.write().await;
         ls.selected_chat_id = Some(chat_id);
-        let (_, selected_chat) = load_chat_state(context.clone(), chat_id).await?;
+        let chatlist = Chatlist::try_load(&context, 0, None, None)
+            .await
+            .map_err(|err| anyhow!("failed to load chats: {:?}", err))?;
+        let (_, selected_chat) = load_chat_state(context.clone(), chat_id, &chatlist).await?;
         ls.selected_chat = selected_chat;
 
         // mark as noticed
@@ -312,11 +315,8 @@ fn get_timestamp(ts: i64) -> DateTime<Utc> {
 async fn load_chat_state(
     context: Context,
     chat_id: ChatId,
+    chats: &Chatlist,
 ) -> Result<(Option<Chat>, Option<ChatState>)> {
-    let chats = Chatlist::try_load(&context, 0, None, None)
-        .await
-        .map_err(|err| anyhow!("failed to load chats: {:?}", err))?;
-
     let (chat, chat_state) = if let Ok(chat) = Chat::load_from_db(&context, chat_id).await {
         if let Some(index) = chats.get_index_for_id(chat_id) {
             let lot = chats.get_summary(&context, index, Some(&chat)).await?;
