@@ -86,10 +86,8 @@ impl Component for Chat {
                     </div>
                 </div>
 
-                <div class="message-list-wrapper">
-                    <Messages with self.props.messages_props.clone() />
-                    { input }
-                </div>
+                <Messages with self.props.messages_props.clone() />
+                { input }
             </div>
 
         }
