@@ -7,4 +7,5 @@ pub mod sidebar;
 pub mod list;
 pub mod modal;
 
+pub mod chat;
 pub mod context_menu;

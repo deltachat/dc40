@@ -2,8 +2,8 @@ use anyhow::Error;
 use log::*;
 use std::collections::HashMap;
 use wasm_bindgen::JsCast;
-use yew::format::Bincode;
 use yew::services::websocket::{WebSocketService, WebSocketStatus, WebSocketTask};
+use yew::{format::Bincode, props};
 use yew::{html, Component, ComponentLink, Html, ShouldRender};
 use yewtil::{
     ptr::{Irc, Mrc},
@@ -13,7 +13,7 @@ use yewtil::{
 use shared::*;
 
 use crate::components::{
-    chatlist::Chatlist, message_input::MessageInput, messages::Messages, modal::Modal,
+    chat::Chat, chatlist::Chatlist, messages::Props as MessagesProps, modal::Modal,
     sidebar::Sidebar,
 };
 
@@ -68,7 +68,8 @@ struct Model {
 impl App {
     fn view_data(&self) -> Html {
         let link = self.link.clone();
-        let onsend = link.callback(move |text| Msg::WsRequest(Request::SendTextMessage { text }));
+        let send_message =
+            link.callback(move |text| Msg::WsRequest(Request::SendTextMessage { text }));
 
         let chats_fetch_callback = link.callback(move |(start_index, stop_index)| {
             Msg::WsRequest(Request::LoadChatList {
@@ -120,10 +121,6 @@ impl App {
         } else {
             html! {}
         };
-        let select_account_callback = link.callback(move |account| {
-            info!("Account switched {}", account);
-            Msg::WsRequest(Request::SelectAccount { account })
-        });
 
         let selected_account = self.model.selected_account.as_ref().unwrap_or_default();
         let account_details = self
@@ -132,44 +129,40 @@ impl App {
             .get(&selected_account)
             .map(|s| s.clone());
 
-        let messages = if self.model.selected_chat_id.is_some() {
-            let mut input = html! {
-              <MessageInput send_callback=onsend />
-            };
-            if let Some(chat) = &*self.model.selected_chat {
-                if chat.is_contact_request {
-                    let account = selected_account;
-                    let chat_id = chat.id;
-                    let accept_contact_request_callback = link.callback(move |_| {
-                        Msg::WsRequest(Request::AcceptContactRequest { account, chat_id })
-                    });
-                    let block_contact_callback = link.callback(move |_| {
-                        Msg::WsRequest(Request::BlockContact { account, chat_id })
-                    });
+        let messages = if let Some(chat) = &*self.model.selected_chat {
+            let chat_id = chat.id;
+            let accept_contact_request_callback = link.callback(move |_| {
+                Msg::WsRequest(Request::AcceptContactRequest {
+                    account: selected_account,
+                    chat_id,
+                })
+            });
+            let block_contact_callback = link.callback(move |_| {
+                Msg::WsRequest(Request::BlockContact {
+                    account: selected_account,
+                    chat_id,
+                })
+            });
 
-                    input = html! {
-                      <div class="contact-request-buttons">
-                        <button class="block-button" onclick=block_contact_callback>
-                          {"Block"}
-                        </button>
-                        <button class="accept-button" onclick=accept_contact_request_callback>
-                          {"Accept"}
-                        </button>
-                      </div>
-                    };
+            let messages_props = props! {
+                MessagesProps {
+                    messages: self.model.messages.irc(),
+                    messages_len: Irc::new(self.model.message_items.len()),
+                    messages_range: self.model.messages_range.irc(),
+                    selected_chat_id: self.model.selected_chat_id.irc(),
+                    fetch_callback: messages_fetch_callback,
                 }
-            }
-            html! {
-              <div class="message-list-wrapper">
-                <Messages
-                   messages=self.model.messages.irc()
-                   messages_len=Irc::new(self.model.message_items.len())
-                   messages_range=self.model.messages_range.irc()
-                   selected_chat_id=self.model.selected_chat_id.irc()
-                   fetch_callback=messages_fetch_callback />
-                { input }
-               </div>
-            }
+            };
+
+            html!(
+                <Chat
+                    accept_contact_request_callback=accept_contact_request_callback
+                    block_contact_callback=block_contact_callback
+                    send_message = send_message
+                    messages_props = messages_props
+                    selected_chat=self.model.selected_chat.clone()
+                />
+            )
         } else {
             html! {
               <div>{"No chat selected"}</div>
@@ -201,26 +194,8 @@ impl App {
                   chats_range=self.model.chats_range.irc()
                   chats_len=self.model.chats_len.irc()
                   fetch_callback=chats_fetch_callback />
-                <div class="chat">
-                  <div class="chat-header"> {
-                    if let Some(chat) = &*self.model.selected_chat {
-                        let (title, subtitle) = get_titles(&chat);
-                        html! {
-                            <div>
-                              <div class="chat-header-name">{title}</div>
-                              <div class="chat-header-subtitle">
-                                { subtitle }
-                              </div>
-                            </div>
-                        }
-                    } else {
-                        html! {}
-                    }
-                  }
-                  </div>
 
-                  { messages }
-                </div>
+                {{messages}}
             </div>
            </>
         }
@@ -435,37 +410,5 @@ impl Component for App {
 
     fn view(&self) -> Html {
         self.view_data()
-    }
-}
-
-/// Get the title and subtitle texts.
-fn get_titles(chat: &ChatState) -> (String, String) {
-    if chat.id == 1 {
-        // deaddrop
-        (
-            "Contact Requests".to_string(),
-            "Click message to start chatting".to_string(),
-        )
-    } else {
-        let title = chat.name.to_string();
-
-        let subtitle = if chat.is_contact_request {
-            "Contact Request".to_string()
-        } else if chat.chat_type == "Group" || chat.chat_type == "VerifiedGroup" {
-            if chat.member_count == 1 {
-                "1 member".to_string()
-            } else {
-                format!("{} members", chat.member_count)
-            }
-        } else if chat.is_self_talk {
-            "Messages I sent to myself".to_string()
-        } else if chat.is_device_talk {
-            "Locally generated messages".to_string()
-        } else {
-            // TODO: print first member address
-            "Private Chat".to_string()
-        };
-
-        (title, subtitle)
     }
 }
