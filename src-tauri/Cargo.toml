@@ -38,3 +38,6 @@ default = []
 [[bin]]
 name = "app"
 path = "src/main.rs"
+
+[profile.dev]
+opt-level = 3
