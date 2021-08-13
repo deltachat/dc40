@@ -364,6 +364,86 @@ impl LocalState {
         }
     }
 
+    pub async fn pin_chat(&self, account_id: u32, chat_id: u32) -> Result<Response> {
+        let ls = self.inner.write().await;
+        if let Some(account) = ls.account_states.get(&account_id) {
+            let ctx = ls.accounts.get_account(account_id).await.unwrap();
+            let chat = ChatId::new(chat_id);
+            account.pin_chat(&ctx, chat).await?;
+
+            let (chat_id, range, items, messages) = account.load_message_list(&ctx, None).await?;
+
+            Ok(Response::MessageList {
+                chat_id,
+                range,
+                items,
+                messages,
+            })
+        } else {
+            Err(anyhow!("invalid account: {}-{}", account_id, chat_id))
+        }
+    }
+
+    pub async fn unpin_chat(&self, account_id: u32, chat_id: u32) -> Result<Response> {
+        let ls = self.inner.write().await;
+        if let Some(account) = ls.account_states.get(&account_id) {
+            let ctx = ls.accounts.get_account(account_id).await.unwrap();
+            let chat = ChatId::new(chat_id);
+            account.unpin_chat(&ctx, chat).await?;
+
+            let (chat_id, range, items, messages) = account.load_message_list(&ctx, None).await?;
+
+            Ok(Response::MessageList {
+                chat_id,
+                range,
+                items,
+                messages,
+            })
+        } else {
+            Err(anyhow!("invalid account: {}-{}", account_id, chat_id))
+        }
+    }
+
+    pub async fn archive_chat(&self, account_id: u32, chat_id: u32) -> Result<Response> {
+        let ls = self.inner.write().await;
+        if let Some(account) = ls.account_states.get(&account_id) {
+            let ctx = ls.accounts.get_account(account_id).await.unwrap();
+            let chat = ChatId::new(chat_id);
+            account.archive_chat(&ctx, chat).await?;
+
+            let (chat_id, range, items, messages) = account.load_message_list(&ctx, None).await?;
+
+            Ok(Response::MessageList {
+                chat_id,
+                range,
+                items,
+                messages,
+            })
+        } else {
+            Err(anyhow!("invalid account: {}-{}", account_id, chat_id))
+        }
+    }
+
+    pub async fn unarchive_chat(&self, account_id: u32, chat_id: u32) -> Result<Response> {
+        let ls = self.inner.write().await;
+        if let Some(account) = ls.account_states.get(&account_id) {
+            let ctx = ls.accounts.get_account(account_id).await.unwrap();
+            let chat = ChatId::new(chat_id);
+            account.unpin_chat(&ctx, chat).await?;
+
+            let (chat_id, range, items, messages) = account.load_message_list(&ctx, None).await?;
+
+            Ok(Response::MessageList {
+                chat_id,
+                range,
+                items,
+                messages,
+            })
+        } else {
+            Err(anyhow!("invalid account: {}-{}", account_id, chat_id))
+        }
+    }
+
     pub async fn accept_contact_request(&self, account_id: u32, chat_id: u32) -> Result<()> {
         let ls = self.inner.write().await;
         if let Some(account) = ls.account_states.get(&account_id) {
