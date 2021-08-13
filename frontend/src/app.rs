@@ -160,7 +160,7 @@ impl App {
                 }
             }
             html! {
-              <div class="message-list-wrapper">
+              <>
                 <Messages
                    messages=self.model.messages.irc()
                    messages_len=Irc::new(self.model.message_items.len())
@@ -168,7 +168,7 @@ impl App {
                    selected_chat_id=self.model.selected_chat_id.irc()
                    fetch_callback=messages_fetch_callback />
                 { input }
-               </div>
+               </>
             }
         } else {
             html! {
