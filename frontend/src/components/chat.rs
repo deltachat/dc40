@@ -21,13 +21,6 @@ pub struct Chat {
 
 pub enum Msg {}
 
-/*
-let accept_contact_request_callback = link.callback(move |_| {
-    Msg::WsRequest(Request::AcceptContactRequest { account, chat_id })
-});
-let block_contact_callback = link.callback(move |_| {
-    Msg::WsRequest(Request::BlockContact { account, chat_id })
-}); */
 
 impl Component for Chat {
     type Message = Msg;
