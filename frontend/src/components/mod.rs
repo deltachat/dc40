@@ -9,3 +9,4 @@ pub mod modal;
 
 pub mod chat;
 pub mod context_menu;
+pub mod windowmanager;
