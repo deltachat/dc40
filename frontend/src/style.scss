@@ -20,16 +20,9 @@ body {
 @import "./styles/modal";
 @import "./styles/account-create";
 @import "./styles/context-menu";
+@import "./styles/windowmanager.scss";
 
 // Layout
-
-.app {
-  display: flex;
-  flex-direction: row;
-  min-height: 100vh;
-  height: 100%;
-}
-
 .account-header {
   flex: 0 0 50px;
   display: flex;
