@@ -1,0 +1,29 @@
+.window {
+  display: flex;
+  height: 100%; 
+}
+
+.side-window {
+  display: flex;
+  flex-direction: row;
+  transition: all 1s;
+  flex: 0 0 300px;
+}
+
+.main-window {
+}
+
+.closed {
+  max-width: 0px;
+}
+
+.toggle-buttons-wrapper {
+  display: flex;
+  justify-content: space-between;
+}
+
+.toggle-button {
+  padding: 1em;
+  border: 1px solid black;
+  border-radius: 2px;
+}
