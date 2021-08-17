@@ -12,7 +12,7 @@ use yewtil::{
 
 use shared::*;
 
-use crate::components::{chat::Chat, chatlist::Chatlist, windowmanager::{FileManager, Props as FileManagerProps}, messages::Props as MessagesProps, modal::Modal, sidebar::Sidebar};
+use crate::components::{chat::Chat, chatlist::Chatlist, windowmanager::{WindowManager, Props as FileManagerProps}, messages::Props as MessagesProps, modal::Modal, sidebar::Sidebar};
 
 #[derive(Debug)]
 pub enum WsAction {
@@ -207,7 +207,7 @@ impl App {
         html! {
             <>
                 {account_creation_modal}
-                <FileManager with file_manager_props/>
+                <WindowManager with file_manager_props/>
             </>
         }
     }
