@@ -7,10 +7,10 @@
   display: flex;
   flex-direction: row;
   transition: all 1s;
-  flex: 0 0 300px;
 }
 
 .main-window {
+  flex: 1;
 }
 
 .closed {

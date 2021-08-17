@@ -26,7 +26,6 @@ body {
 .account-header {
   flex: 0 0 50px;
   display: flex;
-  width: 300px;
   background-color: $darkBlue;
   border-bottom: 1px solid $lightBlueGray;
 
@@ -38,7 +37,7 @@ body {
 }
 
 .sidebar {
-  flex: 0 0 60px;
+  padding: 0.6em;
   display: flex;
   background-color: $darkerBlue;
   flex-direction: column;
@@ -89,7 +88,6 @@ body {
 }
 
 .chat-bar {
-  flex: 0 0 300;
   align-items: stretch;
   max-height: 100vh;
   display: flex;
@@ -98,8 +96,6 @@ body {
 
 
 .chats {
-  flex: 0 0 300px;
-  width: 100%;
   display: flex;
   flex-direction: column;
   height: 100%;
@@ -193,8 +189,6 @@ body {
         flex: 1;
         overflow: hidden;
         text-overflow: ellipsis;
-        width: 175px;
-        max-width: 175px;
         white-space: nowrap;
         font-weight: 400;
         padding: 10px 15px 0 15px;
@@ -240,3 +234,7 @@ body {
   padding: 0px;
 }
 
+.normal-panel {
+  display: flex;
+
+}

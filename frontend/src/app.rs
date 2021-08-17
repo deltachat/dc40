@@ -175,33 +175,31 @@ impl App {
         let file_manager_props = props! {
             FileManagerProps {
                 left: html! {
-                    <>
-                    <Sidebar
-                    accounts=self.model.accounts.irc()
-                    selected_account=self.model.selected_account.irc()
-                    select_account_callback=select_account_callback
-                    create_account_callback=create_account_callback
-                  />
-                  <Chatlist
-                    selected_account=self.model.selected_account.irc()
-                    selected_account_details=account_details
-                    selected_chat_id=self.model.selected_chat_id.irc()
-                    selected_chat=self.model.selected_chat.irc()
-                    selected_chat_length=self.model.selected_chat_length.irc()
-                    select_chat_callback=select_chat_callback
-                    pin_chat_callback=pin_chat_callback
-                    unpin_chat_callback=unpin_chat_callback
-                    archive_chat_callback=archive_chat_callback
-                    unarchive_chat_callback=unarchive_chat_callback
-                    chats=self.model.chats.irc()
-                    chats_range=self.model.chats_range.irc()
-                    chats_len=self.model.chats_len.irc()
-                    fetch_callback=chats_fetch_callback />
-                    </>
+                    <div class="normal-panel">
+                        <Sidebar
+                        accounts=self.model.accounts.irc()
+                        selected_account=self.model.selected_account.irc()
+                        select_account_callback=select_account_callback
+                        create_account_callback=create_account_callback
+                    />
+                    <Chatlist
+                        selected_account=self.model.selected_account.irc()
+                        selected_account_details=account_details
+                        selected_chat_id=self.model.selected_chat_id.irc()
+                        selected_chat=self.model.selected_chat.irc()
+                        selected_chat_length=self.model.selected_chat_length.irc()
+                        select_chat_callback=select_chat_callback
+                        pin_chat_callback=pin_chat_callback
+                        unpin_chat_callback=unpin_chat_callback
+                        archive_chat_callback=archive_chat_callback
+                        unarchive_chat_callback=unarchive_chat_callback
+                        chats=self.model.chats.irc()
+                        chats_range=self.model.chats_range.irc()
+                        chats_len=self.model.chats_len.irc()
+                        fetch_callback=chats_fetch_callback />
+                    </div>
                 },
-                center: html! {
-                    {{messages}}
-                },
+                center: messages,
                 right: None
             }
         };
