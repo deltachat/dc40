@@ -16,6 +16,11 @@ $ rustup target add wasm32-unknown-unknown
 $ cargo install tauri-cli --version 1.0.0-beta.5
 ```
 
+- ['trunk'](https://trunkrs.dev/)
+```sh
+$ cargo install --locked trunk
+```
+
 ## Development Running
 
 
