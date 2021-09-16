@@ -4,9 +4,6 @@ version = "0.1.0"
 authors = ["digifiedquire"]
 edition = "2018"
 
-[lib]
-crate-type = ["cdylib", "rlib"]
-
 [dependencies]
 log = "0.4"
 strum = "0.20"
