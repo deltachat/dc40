@@ -57,6 +57,9 @@ impl Component for WindowManager {
             std::mem::swap(&mut self.old_right, &mut self.props.right);
             self.props.right = props.right;
         }
+        if (props.center != self.props.center) {
+            self.props.center = props.center
+        }
         true
     }
 
@@ -97,7 +100,7 @@ fn optional_side(
     html!(
         <>
             // old-panel (the one that is visible most of the time and can also be called current panel)
-            <section class=classes!("side-window", panel_side_class) style="z-index: 1">
+            <section class=classes!("side-window", panel_side_class, content.is_none().then(|| "closed")) style="z-index: 1">
             {
                 old.take().unwrap_or_else(|| content.take().unwrap_or(html!()))
             }
