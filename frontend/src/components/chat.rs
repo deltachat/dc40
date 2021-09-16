@@ -15,19 +15,17 @@ pub struct Props {
 }
 
 pub struct Chat {
-    link: ComponentLink<Self>,
     props: Props,
 }
 
 pub enum Msg {}
 
-
 impl Component for Chat {
     type Message = Msg;
     type Properties = Props;
 
-    fn create(props: Self::Properties, link: ComponentLink<Self>) -> Self {
-        Chat { props, link }
+    fn create(props: Self::Properties, _link: ComponentLink<Self>) -> Self {
+        Self { props }
     }
 
     fn update(&mut self, _msg: Self::Message) -> ShouldRender {

@@ -57,7 +57,7 @@ impl Component for WindowManager {
             std::mem::swap(&mut self.old_right, &mut self.props.right);
             self.props.right = props.right;
         }
-        if (props.center != self.props.center) {
+        if props.center != self.props.center {
             self.props.center = props.center
         }
         true

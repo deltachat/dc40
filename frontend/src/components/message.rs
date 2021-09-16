@@ -11,17 +11,15 @@ pub struct Props {
 
 pub struct Message {
     message: ChatMessage,
-    link: ComponentLink<Message>,
 }
 
 impl Component for Message {
     type Message = ();
     type Properties = Props;
 
-    fn create(props: Self::Properties, link: ComponentLink<Self>) -> Self {
+    fn create(props: Self::Properties, _link: ComponentLink<Self>) -> Self {
         Message {
             message: props.message,
-            link,
         }
     }
 

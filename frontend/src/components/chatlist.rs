@@ -27,15 +27,14 @@ pub struct Props {
 
 pub struct Chatlist {
     props: Props,
-    link: ComponentLink<Self>,
 }
 
 impl Component for Chatlist {
     type Message = ();
     type Properties = Props;
 
-    fn create(props: Self::Properties, link: ComponentLink<Self>) -> Self {
-        Chatlist { props, link }
+    fn create(props: Self::Properties, _link: ComponentLink<Self>) -> Self {
+        Chatlist { props }
     }
 
     fn update(&mut self, _msg: Self::Message) -> ShouldRender {
@@ -151,15 +150,14 @@ pub struct ChatProps {
 
 struct Chat {
     props: ChatProps,
-    link: ComponentLink<Self>,
 }
 
 impl Component for Chat {
     type Message = ();
     type Properties = ChatProps;
 
-    fn create(props: Self::Properties, link: ComponentLink<Self>) -> Self {
-        Chat { props, link }
+    fn create(props: Self::Properties, _link: ComponentLink<Self>) -> Self {
+        Chat { props }
     }
 
     fn update(&mut self, _msg: Self::Message) -> ShouldRender {
