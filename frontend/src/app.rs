@@ -12,7 +12,14 @@ use yewtil::{
 
 use shared::*;
 
-use crate::components::{chat::Chat, chatlist::Chatlist, windowmanager::{WindowManager, Props as FileManagerProps}, messages::Props as MessagesProps, modal::Modal, sidebar::Sidebar};
+use crate::components::{
+    chat::Chat,
+    chatlist::Chatlist,
+    messages::Props as MessagesProps,
+    modal::Modal,
+    sidebar::Sidebar,
+    windowmanager::{Props as FileManagerProps, WindowManager},
+};
 
 #[derive(Debug)]
 pub enum WsAction {
@@ -31,6 +38,7 @@ pub enum Msg {
     ShowAccountCreation,
     CancelAccountCreation,
     AccountCreation(String, String),
+    ToggleView,
 }
 
 impl From<WsAction> for Msg {
@@ -60,6 +68,7 @@ struct Model {
     message_items: Mrc<Vec<ChatItem>>,
     messages: Mrc<Vec<ChatMessage>>,
     show_account_creation: bool,
+    second_panel: bool,
 }
 
 impl App {
@@ -171,34 +180,38 @@ impl App {
             }
         };
 
+        let toggle = self.link.callback(|_| Msg::ToggleView);
 
         let file_manager_props = props! {
             FileManagerProps {
-                left: html! {
-                    <div class="normal-panel">
-                        <Sidebar
-                        accounts=self.model.accounts.irc()
-                        selected_account=self.model.selected_account.irc()
-                        select_account_callback=select_account_callback
-                        create_account_callback=create_account_callback
-                    />
-                    <Chatlist
-                        selected_account=self.model.selected_account.irc()
-                        selected_account_details=account_details
-                        selected_chat_id=self.model.selected_chat_id.irc()
-                        selected_chat=self.model.selected_chat.irc()
-                        selected_chat_length=self.model.selected_chat_length.irc()
-                        select_chat_callback=select_chat_callback
-                        pin_chat_callback=pin_chat_callback
-                        unpin_chat_callback=unpin_chat_callback
-                        archive_chat_callback=archive_chat_callback
-                        unarchive_chat_callback=unarchive_chat_callback
-                        chats=self.model.chats.irc()
-                        chats_range=self.model.chats_range.irc()
-                        chats_len=self.model.chats_len.irc()
-                        fetch_callback=chats_fetch_callback />
-                    </div>
-                },
+                left:
+                    if !self.model.second_panel {
+                        html! {
+                            <div class="normal-panel">
+                                <Sidebar
+                                accounts=self.model.accounts.irc()
+                                selected_account=self.model.selected_account.irc()
+                                select_account_callback=select_account_callback
+                                create_account_callback=create_account_callback
+                                />
+                            <Chatlist
+                                selected_account=self.model.selected_account.irc()
+                                selected_account_details=account_details
+                                selected_chat_id=self.model.selected_chat_id.irc()
+                                selected_chat=self.model.selected_chat.irc()
+                                selected_chat_length=self.model.selected_chat_length.irc()
+                                select_chat_callback=select_chat_callback
+                                pin_chat_callback=pin_chat_callback
+                                unpin_chat_callback=unpin_chat_callback
+                                archive_chat_callback=archive_chat_callback
+                                unarchive_chat_callback=unarchive_chat_callback
+                                chats=self.model.chats.irc()
+                                chats_range=self.model.chats_range.irc()
+                                chats_len=self.model.chats_len.irc()
+                                fetch_callback=chats_fetch_callback />
+                            </div>
+                        }
+                    } else {html!(<div class="green">{"Panel: 2"}</div>)},
                 center: messages,
                 right: None
             }
@@ -207,6 +220,7 @@ impl App {
         html! {
             <>
                 {account_creation_modal}
+                <button id="togglebutton" onclick=toggle> {"toggle"} </button>
                 <WindowManager with file_manager_props/>
             </>
         }
@@ -409,6 +423,10 @@ impl Component for App {
                 let msg = Msg::WsRequest(Request::Login { email, password });
                 self.link.send_message(msg);
                 self.model.show_account_creation = false;
+                return true;
+            }
+            Msg::ToggleView => {
+                self.model.second_panel = !self.model.second_panel;
                 return true;
             }
         }
