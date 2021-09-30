@@ -19,15 +19,14 @@ pub struct Props {
 
 pub struct Messages {
     props: Props,
-    link: ComponentLink<Messages>,
 }
 
 impl Component for Messages {
     type Message = ();
     type Properties = Props;
 
-    fn create(props: Self::Properties, link: ComponentLink<Self>) -> Self {
-        Messages { props, link }
+    fn create(props: Self::Properties, _link: ComponentLink<Self>) -> Self {
+        Messages { props }
     }
 
     fn update(&mut self, _msg: Self::Message) -> ShouldRender {

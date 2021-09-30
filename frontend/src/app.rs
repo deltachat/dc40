@@ -33,7 +33,6 @@ pub enum Msg {
     Connected,
     WsAction(WsAction),
     WsReady(Result<Response, Error>),
-    Ignore,
     WsRequest(Request),
     ShowAccountCreation,
     CancelAccountCreation,
@@ -394,9 +393,6 @@ impl Component for App {
                     warn!("{:#?}", err);
                 }
             },
-            Msg::Ignore => {
-                return false;
-            }
             Msg::WsRequest(req) => {
                 if let Some(ws) = self.ws.as_mut() {
                     ws.send_binary(Bincode(&req));

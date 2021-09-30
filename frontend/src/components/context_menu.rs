@@ -1,6 +1,6 @@
 //! Context Menu
 
-use std::{collections::HashMap, convert::TryInto, time::Duration};
+use std::{collections::HashMap, time::Duration};
 
 use wasm_bindgen::{prelude::Closure, JsCast};
 use web_sys::HtmlElement;

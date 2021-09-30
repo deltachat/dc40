@@ -14,15 +14,14 @@ pub struct Props {
 
 pub struct Sidebar {
     props: Props,
-    link: ComponentLink<Self>,
 }
 
 impl Component for Sidebar {
     type Message = ();
     type Properties = Props;
 
-    fn create(props: Self::Properties, link: ComponentLink<Self>) -> Self {
-        Sidebar { props, link }
+    fn create(props: Self::Properties, _link: ComponentLink<Self>) -> Self {
+        Sidebar { props }
     }
 
     fn update(&mut self, _msg: Self::Message) -> ShouldRender {
