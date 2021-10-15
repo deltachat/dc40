@@ -1,0 +1,28 @@
+@import "./variables";
+
+
+.create-chat {
+    background-color: $darkBlue;
+    flex-grow: 1;
+    .search {
+        display: flex;
+        padding: 0.7em;
+        border-bottom: 1px solid $gray;
+
+        .search-bar {
+            flex-grow: 1;
+            border-bottom: 2px solid white;
+            border-radius: 4px;
+            color: white;
+        }
+        
+        .create-chat-button {
+            border: 1px solid $gray;
+            background-color: $darkerBlue;
+            border-radius: 4px;
+            color: white;
+            margin-left: 0.8em;
+            cursor: pointer;
+        }
+    }
+}

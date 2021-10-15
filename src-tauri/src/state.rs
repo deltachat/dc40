@@ -7,9 +7,13 @@ use async_std::{path::Path, prelude::*};
 use async_tungstenite::tungstenite::{Error, Message};
 use broadcaster::BroadcastChannel;
 use deltachat::chat::{Chat, ChatId};
+use deltachat::contact::Contact;
 use deltachat::context::Context;
 use deltachat::{message, EventType};
+use futures::future::join_all;
 use futures::sink::SinkExt;
+use futures::stream::{self, StreamExt};
+use itertools::Itertools;
 use log::*;
 use num_traits::FromPrimitive;
 use shared::*;
@@ -486,6 +490,38 @@ impl LocalState {
                     })
                 }
             }
+        } else {
+            Err(anyhow!("no selected account"))
+        }
+    }
+
+    pub async fn send_contacts<T>(&self, writer: Arc<RwLock<T>>) -> Result<()>
+    where
+        T: futures::sink::Sink<Message> + Unpin + Sync + Send + 'static,
+        T::Error: std::fmt::Debug + std::error::Error + Send + Sync,
+    {
+        let ls = self.inner.read().await;
+        if let Some((_, ctx)) = ls.get_selected_account().await {
+            let query: Option<&'static str> = None;
+            let contact_ids = deltachat::contact::Contact::get_all(&ctx, 0, query).await?;
+            info!("Contact-list: {:?}", contact_ids);
+            let contacts = stream::iter(contact_ids)
+                .then(|id| Contact::load_from_db(&ctx, id))
+                .filter_map(|contact| async {
+                    match contact {
+                        Ok(contact) => Some(ContactInfo {
+                            id: contact.id,
+                            mail: contact.get_addr().to_owned(),
+                            display_name: contact.get_display_name().to_owned(),
+                        }),
+                        Err(_) => None,
+                    }
+                })
+                .collect::<Vec<ContactInfo>>()
+                .await;
+
+            send(writer, Response::Contacts(contacts)).await?;
+            Ok(())
         } else {
             Err(anyhow!("no selected account"))
         }

@@ -20,6 +20,8 @@ body {
 @import "./styles/account-create";
 @import "./styles/context-menu";
 @import "./styles/windowmanager.scss";
+@import "./styles/create-chat.scss";
+
 
 // Layout
 .account-header {
@@ -58,6 +60,8 @@ body {
   padding: 0;
   margin: 0;
   height: 100%;
+
+  
 
   .chat-header {
     display: flex;
@@ -98,6 +102,21 @@ body {
   display: flex;
   flex-direction: column;
   height: 100%;
+  background-color: #0a1d3b;
+
+  #new_chat_button {
+    cursor: pointer;
+    text-align: center;
+    padding: 0.4em;
+    border-radius: 7px;
+    margin: 5px;
+    background-color: #0a1d3b;
+    color: white;
+    border: 2px solid white;
+    &:hover {
+      border-color: rgb(232, 240, 254);
+    }
+  }
 }
 
 ::-webkit-scrollbar {
@@ -123,6 +142,8 @@ body {
   overflow-x: hidden;
   min-height: 0px;
 
+  
+  
   .chat-list-item {
     flex: 1;
     display: flex;
@@ -235,5 +256,5 @@ body {
 
 .normal-panel {
   display: flex;
-
 }
+

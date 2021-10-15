@@ -1323,6 +1323,7 @@ dependencies = [
  "femme",
  "futures",
  "glob",
+ "itertools 0.10.1",
  "lazy_static",
  "log",
  "num-traits",

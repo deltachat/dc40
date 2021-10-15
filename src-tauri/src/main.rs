@@ -227,6 +227,7 @@ where
         Request::GetAccountDetail { id } => {
             local_state.send_account_details(id, writer).await?;
         }
+        Request::GetContacts => local_state.send_contacts(writer).await?,
     }
     Ok(())
 }

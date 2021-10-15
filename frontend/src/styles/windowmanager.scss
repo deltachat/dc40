@@ -14,14 +14,11 @@
 }
 
 .side-window {
-  transition: max-width 0.25s ease-in !important;
-  transition: none;
+  transition: max-width 0.25s ease-in;
   max-width: 330px;
-  width: 330px;
-  overflow: hidden;
+  width: 100%;
   display: flex;
   flex-direction: row;
-  transition: all 1s;
 }
 
 .switch-window {
