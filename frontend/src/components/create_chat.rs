@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use log::info;
 use shared::ContactInfo;
 use yew::prelude::*;
@@ -12,9 +14,12 @@ pub struct Props {
 pub struct CreateChat {
     link: ComponentLink<Self>,
     props: Props,
+    selected: HashSet<u32>,
 }
 
-pub enum Msg {}
+pub enum Msg {
+    Toggle(u32),
+}
 
 impl Component for CreateChat {
     type Message = Msg;
@@ -24,11 +29,24 @@ impl Component for CreateChat {
         if *props.contacts == None {
             props.contact_cb.emit(());
         }
-        CreateChat { props, link }
+        CreateChat {
+            props,
+            link,
+            selected: HashSet::new(),
+        }
     }
 
-    fn update(&mut self, _msg: Self::Message) -> ShouldRender {
-        false
+    fn update(&mut self, msg: Self::Message) -> ShouldRender {
+        match msg {
+            Msg::Toggle(id) => {
+                if self.selected.contains(&id) {
+                    self.selected.remove(&id);
+                } else {
+                    self.selected.insert(id);
+                }
+                true
+            }
+        }
     }
 
     fn change(&mut self, props: Self::Properties) -> ShouldRender {
@@ -37,13 +55,19 @@ impl Component for CreateChat {
     }
 
     fn view(&self) -> Html {
+        let cb = self.link.callback(|id| Msg::Toggle(id));
+
         let contacts = if let Some(contacts) = &*self.props.contacts {
-            html!({for contacts.iter().map(|contact| html!(
-                <div>
-                    {contact.mail.clone()}
-                    {contact.display_name.clone()}
+            html!({for contacts.iter().map(move |contact|{
+                let cb_clone = cb.clone();
+                let id = contact.id.clone();
+                let toggle_contact_cb: Callback<_> = (move |_| cb_clone.emit(id)).into();
+                html!(
+                <div onclick=toggle_contact_cb class=classes!("contact", (self.selected.contains(&contact.id)).then(|| "selected"))>
+                    <h1>{contact.display_name.clone()}</h1>
+                    <p>{contact.mail.clone()}</p>
                 </div>
-            ))})
+            )})})
         } else {
             html!(<p> {"No contacts"}</p>)
         };
@@ -54,8 +78,10 @@ impl Component for CreateChat {
                     <button class="create-chat-button"> {"+"} </button>
                 </div>
 
-                <div class="ContactList">
-                    {contacts}
+                <div class="contact-list">
+                    <div>
+                        {contacts}
+                    </div>
                 </div>
             </div>
         }
