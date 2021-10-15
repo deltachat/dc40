@@ -1,6 +1,7 @@
 html, body {
-  height: 100%;
+  height: 100vh;
   margin: 0px;
+  box-sizing: border-box;
 }
 
 body {
@@ -21,6 +22,8 @@ body {
 @import "./styles/context-menu";
 @import "./styles/windowmanager.scss";
 @import "./styles/create-chat.scss";
+@import "./styles/utility-classes.sass";
+
 
 
 // Layout

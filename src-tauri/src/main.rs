@@ -228,6 +228,10 @@ where
             local_state.send_account_details(id, writer).await?;
         }
         Request::GetContacts => local_state.send_contacts(writer).await?,
+        Request::CreateChat(contacts) => local_state.create_chat(contacts).await?,
+        Request::CreateGroupChat(contacts, chat_name) => {
+            local_state.create_group_chat(contacts, &chat_name).await?
+        }
     }
     Ok(())
 }

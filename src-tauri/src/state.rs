@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use anyhow::{anyhow, Result};
 use async_std::sync::{Arc, RwLock};
@@ -6,7 +6,7 @@ use async_std::task;
 use async_std::{path::Path, prelude::*};
 use async_tungstenite::tungstenite::{Error, Message};
 use broadcaster::BroadcastChannel;
-use deltachat::chat::{Chat, ChatId};
+use deltachat::chat::{self, Chat, ChatId, ProtectionStatus};
 use deltachat::contact::Contact;
 use deltachat::context::Context;
 use deltachat::{message, EventType};
@@ -459,6 +459,27 @@ impl LocalState {
         } else {
             Err(anyhow!("invalid account: {}-{}", account_id, chat_id))
         }
+    }
+
+    pub async fn create_chat(&self, contacts: HashSet<u32>) -> Result<()> {
+        let ls = self.inner.read().await;
+        if let Some((_, ctx)) = ls.get_selected_account().await {
+            ChatId::create_for_contact(&ctx, *contacts.iter().next().unwrap()).await?;
+        }
+        Ok(())
+    }
+
+    pub async fn create_group_chat(&self, contacts: HashSet<u32>, chat_name: &str) -> Result<()> {
+        let ls = self.inner.read().await;
+        if let Some((_, ctx)) = ls.get_selected_account().await {
+            let chat_id =
+                chat::create_group_chat(&ctx, ProtectionStatus::Unprotected, chat_name).await?;
+
+            for contact in contacts {
+                chat::add_contact_to_chat(&ctx, chat_id, contact).await;
+            }
+        }
+        Ok(())
     }
 
     pub async fn block_contact(&self, account_id: u32, chat_id: u32) -> Result<()> {

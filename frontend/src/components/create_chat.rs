@@ -9,16 +9,22 @@ use yewtil::{ptr::Irc, NeqAssign};
 pub struct Props {
     pub contacts: Irc<Option<Vec<ContactInfo>>>,
     pub contact_cb: Callback<()>,
+    pub create_chat_cb: Callback<HashSet<u32>>,
+    pub create_group_chat_cb: Callback<(HashSet<u32>, String)>,
+    pub add_chat_close_cb: Callback<()>,
 }
 
 pub struct CreateChat {
     link: ComponentLink<Self>,
     props: Props,
     selected: HashSet<u32>,
+    group_name: String,
 }
 
 pub enum Msg {
     Toggle(u32),
+    Send,
+    OnChange(yew::ChangeData),
 }
 
 impl Component for CreateChat {
@@ -33,6 +39,7 @@ impl Component for CreateChat {
             props,
             link,
             selected: HashSet::new(),
+            group_name: String::from("generic group"),
         }
     }
 
@@ -46,6 +53,27 @@ impl Component for CreateChat {
                 }
                 true
             }
+            Msg::Send => {
+                if self.selected.len() == 1 {
+                    info!("creating new 1o1 chat");
+                    self.props.create_chat_cb.emit(self.selected.clone());
+                } else if self.selected.len() > 1 {
+                    info!("creating new group chat with users: {:?}", self.selected);
+                    self.props
+                        .create_group_chat_cb
+                        .emit((self.selected.clone(), self.group_name.clone()));
+                }
+                self.props.add_chat_close_cb.emit(());
+                true
+            }
+            Msg::OnChange(change) => {
+                if let yew::ChangeData::Value(text) = change {
+                    if !text.trim().is_empty() {
+                        self.link.send_message(Msg::Send);
+                    }
+                }
+                false
+            }
         }
     }
 
@@ -56,7 +84,7 @@ impl Component for CreateChat {
 
     fn view(&self) -> Html {
         let cb = self.link.callback(|id| Msg::Toggle(id));
-
+        let send = self.link.callback(|_| Msg::Send);
         let contacts = if let Some(contacts) = &*self.props.contacts {
             html!({for contacts.iter().map(move |contact|{
                 let cb_clone = cb.clone();
@@ -69,15 +97,27 @@ impl Component for CreateChat {
                 </div>
             )})})
         } else {
-            html!(<p> {"No contacts"}</p>)
+            html!(<p class="text-center"> {"No contacts"}</p>)
         };
+
+        let cb = self.props.add_chat_close_cb.clone();
+        let close_cb: Callback<_> = (move |_| cb.emit(())).into();
+
         html! {
             <div class="create-chat">
-                <div class="search">
-                    <div contenteditable="true" type="text" class="search-bar">{"User..."} </div>
-                    <button class="create-chat-button"> {"+"} </button>
+                <div class="header">
+                    <div class="search">
+                        <button id="close" onclick=close_cb> <div class="icon close" /> </button>
+                        <input size="1" id="search-bar" type="text" />
+                        <button id="create-chat-button" onclick=send> <div class=classes!("icon", "send", "small", if self.selected.len() != 0 {"ok"} else {"err"}) /> </button>
+                    </div>
+                    <div class=classes!( if self.selected.len() > 1 {"open"} else {"closed"}, "overflow-y-hidden", "wrapper") >
+                        <div class="group-name">
+                            <label for="search-bar">{"Group-name: "}</label>
+                            <input size="1"/>
+                        </div>
+                    </div>
                 </div>
-
                 <div class="contact-list">
                     <div>
                         {contacts}

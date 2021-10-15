@@ -7,34 +7,82 @@
     display: flex;
     flex-direction: column;
 
-    .search {
-        display: flex;
-        padding: 0.7em;
+    .header {
         border-bottom: 1px solid $gray;
+        padding: 0.7em;
+        .search {
+            display: flex;
+            #search-bar {
+                flex-grow: 1;
+                border: none;
+                border-bottom: 2px solid white;
+                color: white;
+                background: $darkBlue;
+                font-size: 1.4em;
+                margin: 0px 1em;
+            }
 
-        .search-bar {
-            flex-grow: 1;
-            border-bottom: 2px solid white;
-            border-radius: 4px;
-            color: white;
-            font-size: 1.4em;
+            &> button {
+                border: 1px solid $gray;
+                background-color: $darkerBlue;
+                border-radius: 4px;
+                color: white;
+                cursor: pointer;
+            }
+            #close {
+                &> div {
+                    background-color: #ffffff;
+                    color: white
+                }
+            }
+            #create-chat-button {
+                .ok {
+                    background-color: white;
+
+                }
+                .err {
+                    background-color: gray;
+                }
+            }
         }
-    
-        .create-chat-button {
-            border: 1px solid $gray;
-            background-color: $darkerBlue;
-            border-radius: 4px;
-            color: white;
-            margin-left: 0.8em;
-            cursor: pointer;
+        .wrapper {
+            transition: all 2s ease;
+        }
+        .group-name {
+            border-top: 1px solid $gray;
+            display: flex;
+            margin-top: 0.5em;
+            padding-top: 0.5em;
+            align-items: center;
+            &>label {
+                color: white;
+                font-size: 1.2em;
+                margin-right: 0.3em;
+            }
+            &>input {
+                font-size: 1.4em;
+                border: none;
+                border-bottom: 2px solid white;
+                background: $darkBlue;
+                display: block;
+                min-width: 0px;
+                flex-grow: 1;
+                color: white;
+            }
+        }
+        .closed {
+            max-height: 0px;
+        }
+        .open {
+            max-height: 100%;
         }
     }
     .contact-list{
+        color: white;
         overflow-y: scroll;
         .contact {
             padding: 0.5em;
             border-bottom: 1px solid gray;
-            color: white;
             &> p {
                 margin: 0.4em 0px;
                 overflow-x: hidden;

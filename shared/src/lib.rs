@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 
 use chrono::{DateTime, Utc};
@@ -218,6 +218,8 @@ pub enum Request {
         chat_id: u32,
     },
     GetContacts,
+    CreateChat(HashSet<u32>),
+    CreateGroupChat(HashSet<u32>, String),
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, FromPrimitive, ToPrimitive)]

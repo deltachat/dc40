@@ -30,7 +30,7 @@ pub enum WsAction {
 }
 
 #[derive(Debug)]
-enum ChangePanel {
+pub enum ChangePanel {
     Left(LeftPanel),
     Center,
     Right,
@@ -204,6 +204,11 @@ impl App {
         };
 
         let load_contacts = link.callback(|_| Msg::WsRequest(Request::GetContacts));
+        let create_chat_cb = link.callback(|users| Msg::WsRequest(Request::CreateChat(users)));
+        let create_group_chat_cb =
+            link.callback(|(users, name)| Msg::WsRequest(Request::CreateGroupChat(users, name)));
+        let add_chat_close_cb =
+            link.callback(|_| Msg::ChangePanel(ChangePanel::Left(LeftPanel::Chats)));
 
         let left = match self.model.left_panel {
             LeftPanel::Chats => {
@@ -238,7 +243,12 @@ impl App {
             }
             LeftPanel::NewChat => {
                 html! {
-                    <CreateChat contacts=self.model.contacts.irc() contact_cb=load_contacts />
+                    <CreateChat
+                        create_group_chat_cb=create_group_chat_cb
+                        create_chat_cb=create_chat_cb
+                        contacts=self.model.contacts.irc()
+                        contact_cb=load_contacts
+                        add_chat_close_cb=add_chat_close_cb />
                 }
             }
         };
