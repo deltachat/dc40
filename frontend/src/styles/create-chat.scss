@@ -7,75 +7,78 @@
     display: flex;
     flex-direction: column;
 
-    .header {
+    .search {
+        display: flex;
         border-bottom: 1px solid $gray;
         padding: 0.7em;
-        .search {
-            display: flex;
-            #search-bar {
-                flex-grow: 1;
-                border: none;
-                border-bottom: 2px solid white;
-                color: white;
-                background: $darkBlue;
-                font-size: 1.4em;
-                margin: 0px 1em;
-            }
+        #search-bar {
+            flex-grow: 1;
+            border: none;
+            padding: 2px;
+            border-bottom: 1px solid white;
+            color: white;
+            background: $darkBlue;
+            font-size: 1.2em;
+            margin: 0px 0.7em;
+        }
 
-            &> button {
-                border: 1px solid $gray;
-                background-color: $darkerBlue;
-                border-radius: 4px;
-                color: white;
-                cursor: pointer;
-            }
-            #close {
-                &> div {
-                    background-color: #ffffff;
-                    color: white
-                }
-            }
-            #create-chat-button {
-                .ok {
-                    background-color: white;
-
-                }
-                .err {
-                    background-color: gray;
-                }
+        &> button {
+            border: 1px solid $gray;
+            background-color: $darkerBlue;
+            border-radius: 4px;
+            color: white;
+            cursor: pointer;
+        }
+        #close {
+            &> div {
+                display: flex;
+                background-color: #ffffff;
+                color: white
             }
         }
-        .wrapper {
-            transition: all 2s ease;
-        }
-        .group-name {
-            border-top: 1px solid $gray;
+        #create-chat-button {
             display: flex;
-            margin-top: 0.5em;
-            padding-top: 0.5em;
             align-items: center;
-            &>label {
-                color: white;
-                font-size: 1.2em;
-                margin-right: 0.3em;
+            .ok {
+                background-color: white;
+
             }
-            &>input {
-                font-size: 1.4em;
-                border: none;
-                border-bottom: 2px solid white;
-                background: $darkBlue;
-                display: block;
-                min-width: 0px;
-                flex-grow: 1;
-                color: white;
+            .err {
+                background-color: gray;
             }
         }
-        .closed {
-            max-height: 0px;
+    }
+        
+    
+    .wrapper {
+        // transition: all 0.2s ease-in; pls fix
+        border-bottom: 1px solid $gray;
+
+    }
+    .group-name {
+        padding: 0.7em;        
+        padding-top: 0.5em;
+        &>label {
+            color: white;
+            font-size: 0.8em;
+            margin-right: 0.3em;
         }
-        .open {
-            max-height: 100%;
+        &>input {
+            font-size: 1.2em;
+            border: none;
+            border-bottom: 1px solid white;
+            background: $darkBlue;
+            display: block;
+            width: 100%;
+            color: white;
         }
+    }
+    .closed {
+        overflow-y: hidden;
+        max-height: 0px;
+    }
+    .open {
+        max-height: 100%;
     }
     .contact-list{
         color: white;
@@ -84,12 +87,12 @@
             padding: 0.5em;
             border-bottom: 1px solid gray;
             &> p {
-                margin: 0.4em 0px;
+                margin: 0.2em 0px;
                 overflow-x: hidden;
             }
-            &> h1 {
+            &> h2 {
                 overflow-x: hidden;
-                margin: 0.4em 0px;
+                margin: 0.2em 0px;
 
             } 
         }

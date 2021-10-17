@@ -92,7 +92,7 @@ impl Component for CreateChat {
                 let toggle_contact_cb: Callback<_> = (move |_| cb_clone.emit(id)).into();
                 html!(
                 <div onclick=toggle_contact_cb class=classes!("contact", (self.selected.contains(&contact.id)).then(|| "selected"))>
-                    <h1>{contact.display_name.clone()}</h1>
+                    <h2>{contact.display_name.clone()}</h2>
                     <p>{contact.mail.clone()}</p>
                 </div>
             )})})
@@ -105,19 +105,19 @@ impl Component for CreateChat {
 
         html! {
             <div class="create-chat">
-                <div class="header">
-                    <div class="search">
-                        <button id="close" onclick=close_cb> <div class="icon close" /> </button>
-                        <input size="1" id="search-bar" type="text" />
-                        <button id="create-chat-button" onclick=send> <div class=classes!("icon", "send", "small", if self.selected.len() != 0 {"ok"} else {"err"}) /> </button>
-                    </div>
-                    <div class=classes!( if self.selected.len() > 1 {"open"} else {"closed"}, "overflow-y-hidden", "wrapper") >
-                        <div class="group-name">
-                            <label for="search-bar">{"Group-name: "}</label>
-                            <input size="1"/>
-                        </div>
+                <div class="search">
+                    <button id="close" onclick=close_cb> <div class="icon arrow-back" /> </button>
+                    <input size="1" id="search-bar" type="text" />
+                    <button id="create-chat-button" onclick=send> <div class=classes!("icon", "send", "small", if self.selected.len() != 0 {"ok"} else {"err"}) /> </button>
+                </div>
+
+                <div class=classes!( if self.selected.len() > 1 {"open"} else {"closed"}, "wrapper") >
+                    <div class="group-name">
+                        <label for="search-bar">{"Group-name: "}</label>
+                        <input size="1" alt="Group name"/>
                     </div>
                 </div>
+
                 <div class="contact-list">
                     <div>
                         {contacts}
