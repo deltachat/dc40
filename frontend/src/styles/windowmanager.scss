@@ -3,16 +3,6 @@
   height: 100%; 
 }
 
-#togglebutton {
-  position: absolute;
-  top: 0px;
-  left: 50%;
-  padding: 1em;
-  border: 1px solid gray;
-  border-radius: 0.8em;
-  margin: 2px;
-}
-
 .side-window {
   transition: max-width 0.25s ease-in !important;
   transition: none;
@@ -29,26 +19,12 @@
   height: 100vh;
 }
 
-.red {
-  background-color: red;
-  height: 100%;
-  text-align: center;
-  width: 100%
-}
-
 .panel-left{
   left: 0px
 }
 
 .panel-right{
   right: 0px
-}
-
-.green {
-  background-color: green;
-  height: 100%;
-  text-align: center;
-  width: 100%
 }
 
 .main-window {
@@ -58,16 +34,4 @@
 .closed {
   max-width: 0px;
   transition: none !important;
-
-}
-
-.toggle-buttons-wrapper {
-  display: flex;
-  justify-content: space-between;
-}
-
-.toggle-button {
-  padding: 1em;
-  border: 1px solid black;
-  border-radius: 2px;
 }

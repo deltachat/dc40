@@ -97,13 +97,15 @@ fn optional_side(
     html!(
         <>
             // old-panel (the one that is visible most of the time and can also be called current panel)
-            <section class=classes!("side-window", panel_side_class) style="z-index: 1">
+            <section class=classes!("side-window", panel_side_class,
+                content.is_none().then(|| "closed")) style="z-index: 1">
             {
                 old.take().unwrap_or_else(|| content.take().unwrap_or(html!()))
             }
             </section>
             // new panel (the one that gets swiped over the old one)
-            <section ontransitionend=transition_cb class=classes!("side-window", (!do_switch).then(|| "closed"), panel_side_class, "switch-window") style="z-index: 2">
+            <section ontransitionend=transition_cb class=classes!("side-window",
+                (!do_switch).then(|| "closed"), panel_side_class, "switch-window") style="z-index: 2">
             {
                 do_switch.then(|| content.take().unwrap()).unwrap_or(html!())
             }
