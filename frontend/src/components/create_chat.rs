@@ -1,6 +1,7 @@
-use std::collections::HashSet;
+use std::{collections::HashSet, iter::FromIterator};
 
-use log::{error, info};
+use itertools::Itertools;
+use log::info;
 use shared::ContactInfo;
 use web_sys::HtmlInputElement;
 use yew::prelude::*;
@@ -32,6 +33,14 @@ pub enum Msg {
 impl Component for CreateChat {
     type Message = Msg;
     type Properties = Props;
+
+    fn change(&mut self, props: Self::Properties) -> ShouldRender {
+        info!("contacts: {:?}", *props.contacts);
+        if props.contacts.is_none() {
+            self.props.contact_cb.emit(());
+        }
+        self.props.neq_assign(props)
+    }
 
     fn create(props: Self::Properties, link: ComponentLink<Self>) -> Self {
         if props.contacts.is_none() {
@@ -79,30 +88,43 @@ impl Component for CreateChat {
             }
             Msg::OnInputQuery(change) => {
                 self.query = change;
-                info!("yeet");
                 true
             }
         }
-    }
-
-    fn change(&mut self, props: Self::Properties) -> ShouldRender {
-        info!("contacts: {:?}", *props.contacts);
-        if props.contacts.is_none() {
-            self.props.contact_cb.emit(());
-        }
-        self.props.neq_assign(props)
     }
 
     fn view(&self) -> Html {
         let cb = self.link.callback(|id| Msg::Toggle(id));
         let send = self.link.callback(|_| Msg::Send);
         let contacts = if let Some(contacts) = &*self.props.contacts {
-            html!({for contacts.iter().map(move |contact|{
+            let chars = self.query.chars().unique().collect_vec();
+            let filtered_contacts: Box<dyn Iterator<Item = &ContactInfo>> =
+                if !self.query.is_empty() {
+                    Box::new(contacts.iter().filter(|a| {
+                        let mail_chars = HashSet::<char>::from_iter(a.mail.chars());
+                        let mut mail_ok = true;
+                        let name_chars = HashSet::<char>::from_iter(a.display_name.chars());
+                        let mut name_ok = true;
+
+                        for chara in &chars {
+                            if !mail_chars.contains(&chara) {
+                                mail_ok = false
+                            }
+                            if !name_chars.contains(&chara) {
+                                name_ok = false
+                            }
+                        }
+                        mail_ok || name_ok
+                    }))
+                } else {
+                    Box::new(contacts.iter())
+                };
+            html!({for filtered_contacts.map(move |contact|{
                 let cb_clone = cb.clone();
                 let id = contact.id.clone();
                 let toggle_contact_cb: Callback<_> = (move |_| cb_clone.emit(id)).into();
                 html!(
-                <div onclick=toggle_contact_cb class=classes!("contact", (self.selected.contains(&contact.id)).then(|| "selected"))>
+                <div key=contact.mail.clone() onclick=toggle_contact_cb class=classes!("contact", (self.selected.contains(&contact.id)).then(|| "selected"))>
                     <h2>{contact.display_name.clone()}</h2>
                     <p>{contact.mail.clone()}</p>
                 </div>

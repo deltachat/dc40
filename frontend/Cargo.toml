@@ -24,7 +24,7 @@ yew_form = { git = "https://github.com/dignifiedquire/yew_form", branch = "yew-1
 yew_form_derive = { git = "https://github.com/dignifiedquire/yew_form", branch = "yew-18"}
 validator = "0.14"
 validator_derive = "0.14"
-
+itertools = "0.10.1"
 
 [dependencies.web-sys]
 version = "0.3.4"
