@@ -3,18 +3,7 @@
   height: 100%; 
 }
 
-#togglebutton {
-  position: absolute;
-  top: 0px;
-  left: 50%;
-  padding: 1em;
-  border: 1px solid gray;
-  border-radius: 0.8em;
-  margin: 2px;
-}
-
 .side-window {
-  transition: all 0.25s ease-in;
   max-width: 330px;
   width: 100%;
   display: flex;
@@ -24,14 +13,9 @@
 .switch-window {
   position: absolute;
   height: 100vh;
+  transform: translateX(-100%);
 }
 
-.red {
-  background-color: red;
-  height: 100%;
-  text-align: center;
-  width: 100%
-}
 
 .panel-left{
   left: 0px
@@ -41,30 +25,12 @@
   right: 0px
 }
 
-.green {
-  background-color: green;
-  height: 100%;
-  text-align: center;
-  width: 100%
-}
-
 .main-window {
   flex: 1;
 }
 
-.side-window + .closed {
-  max-width: 0px;
-  transition: none !important;
+.in {
+  transform: translateX(0px) !important;
+  transition: all 0.25s ease-in;
 
-}
-
-.toggle-buttons-wrapper {
-  display: flex;
-  justify-content: space-between;
-}
-
-.toggle-button {
-  padding: 1em;
-  border: 1px solid black;
-  border-radius: 2px;
 }

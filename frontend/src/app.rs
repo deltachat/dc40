@@ -12,6 +12,7 @@ use yewtil::{
 
 use shared::*;
 
+use crate::components::windowmanager::{ChangePanel, LeftPanel};
 use crate::components::{
     chat::Chat,
     chatlist::Chatlist,
@@ -27,13 +28,6 @@ pub enum WsAction {
     Connect,
     Disconnect,
     Lost,
-}
-
-#[derive(Debug)]
-pub enum ChangePanel {
-    Left(LeftPanel),
-    Center,
-    Right,
 }
 
 #[derive(Debug)]
@@ -59,18 +53,6 @@ pub struct App {
     link: ComponentLink<App>,
     model: Model,
     ws: Option<WebSocketTask>,
-}
-
-#[derive(Debug, Clone)]
-enum LeftPanel {
-    Chats,
-    NewChat,
-}
-
-impl Default for LeftPanel {
-    fn default() -> Self {
-        Self::NewChat
-    }
 }
 
 #[derive(Debug, Clone, Default)]
@@ -213,7 +195,6 @@ impl App {
         let left = match self.model.left_panel {
             LeftPanel::Chats => {
                 html!(
-                    <>
                     <div class="normal-panel">
                         <Sidebar
                             accounts=self.model.accounts.irc()
@@ -238,7 +219,6 @@ impl App {
                             fetch_callback=chats_fetch_callback
                             create_chat_callback=create_chat_callback/>
                     </div>
-                    </>
                 )
             }
             LeftPanel::NewChat => {
@@ -257,7 +237,8 @@ impl App {
             WindowManagerProps {
                 left,
                 center: messages,
-                right: None
+                right: None,
+                left_type: self.model.left_panel.clone()
             }
         };
 
@@ -442,7 +423,7 @@ impl Component for App {
                         }
                     }
                     Response::Contacts(contacts) => {
-                        info!("received contacts: {:?}", contacts);
+                        error!("received contacts");
                         self.model.contacts = Mrc::new(Some(contacts));
                         return true;
                     }

@@ -1,17 +1,39 @@
 use yew::prelude::*;
+#[derive(Debug)]
+pub enum ChangePanel {
+    Left(LeftPanel),
+    Center,
+    Right,
+}
+
 #[derive(Properties, Clone, PartialEq)]
 
 pub struct Props {
     pub left: Option<Html>,
     pub center: Option<Html>,
     pub right: Option<Html>,
+    pub left_type: LeftPanel,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum LeftPanel {
+    Chats,
+    NewChat,
+}
+
+impl Default for LeftPanel {
+    fn default() -> Self {
+        Self::NewChat
+    }
 }
 
 pub struct WindowManager {
     link: ComponentLink<Self>,
     props: Props,
-    old_left: Option<Html>,
-    old_right: Option<Html>,
+    left: Option<Html>,
+    right: Option<Html>,
+    new_left: Option<Html>,
+    new_right: Option<Html>,
 }
 
 pub enum PanelSide {
@@ -27,12 +49,14 @@ impl Component for WindowManager {
     type Message = Msg;
     type Properties = Props;
 
-    fn create(props: Self::Properties, link: ComponentLink<Self>) -> Self {
+    fn create(mut props: Self::Properties, link: ComponentLink<Self>) -> Self {
         WindowManager {
-            props,
             link,
-            old_left: None,
-            old_right: None,
+            left: props.left.take(),
+            right: props.right.take(),
+            props,
+            new_left: None,
+            new_right: None,
         }
     }
 
@@ -40,25 +64,38 @@ impl Component for WindowManager {
         match msg {
             Msg::Switch(panel) => {
                 match panel {
-                    PanelSide::Left => self.old_left = None,
-                    PanelSide::Right => self.old_right = None,
+                    PanelSide::Left => {
+                        self.left = Some(self.new_left.take().expect("must have a new_left"));
+                        self.new_left = None;
+                    }
+                    PanelSide::Right => {
+                        self.right = Some(self.new_right.take().expect("must have a new_right"));
+                        self.new_right = None
+                    }
                 }
                 true
             }
         }
     }
 
-    fn change(&mut self, props: Self::Properties) -> ShouldRender {
-        if props.left != self.props.left {
-            std::mem::swap(&mut self.old_left, &mut self.props.left);
-            self.props.left = props.left;
-        }
-        if props.right != self.props.right {
-            std::mem::swap(&mut self.old_right, &mut self.props.right);
-            self.props.right = props.right;
-        }
-        if props.center != self.props.center {
-            self.props.center = props.center
+    fn change(&mut self, mut props: Self::Properties) -> ShouldRender {
+        // Different view so we do a transition-effect
+        if props.left_type != self.props.left_type {
+            self.props.left_type = props.left_type;
+
+            if props.left != self.left {
+                self.new_left = props.left;
+            }
+            if props.right != self.right {
+                self.new_right = props.right;
+            }
+            if props.center != self.props.center {
+                self.props.center = props.center
+            }
+        } else {
+            self.left = props.left.take();
+            self.right = props.right.take();
+            self.props = props;
         }
         true
     }
@@ -73,11 +110,11 @@ impl Component for WindowManager {
         html! {
             <>
                 <div class="window">
-                    { optional_side(self.props.left.clone(), self.old_left.clone(), PanelSide::Left, left_switch_cb) }
+                    { optional_side(self.left.clone(), self.new_left.clone(), PanelSide::Left, left_switch_cb) }
                     <main class="main-window">
                         {main}
                     </main>
-                    { optional_side(self.props.right.clone(), self.old_right.clone(), PanelSide::Right, right_switch_cb) }
+                    { optional_side(self.right.clone(), self.new_right.clone(), PanelSide::Right, right_switch_cb) }
                 </div>
             </>
         }
@@ -85,8 +122,8 @@ impl Component for WindowManager {
 }
 
 fn optional_side(
-    mut content: Option<Html>,
-    mut old: Option<Html>,
+    content: Option<Html>,
+    slide: Option<Html>,
     side: PanelSide,
     transition_cb: Callback<TransitionEvent>,
 ) -> Html {
@@ -95,25 +132,33 @@ fn optional_side(
         PanelSide::Right => "panel-right",
     };
 
-    let do_switch = old.is_some();
+    let slide = match slide {
+        Some(content) => html! {
+            <section ontransitionend=transition_cb class=classes!("side-window", panel_side_class, "switch-window", "in") style="z-index: 2">
+            { content }
+            </section>
+        },
+        None => html!(
+            <section class=classes!("side-window", panel_side_class, "switch-window") style="z-index: 2">
+            </section>
+        ),
+    };
+
+    let content = match content {
+        Some(content) => html! {
+            <section class=classes!("side-window", panel_side_class) style="z-index: 1">
+            {
+                content
+            }
+            </section>
+        },
+        None => html!(),
+    };
 
     html!(
         <>
-            // old-panel (the one that is visible most of the time and can also be called current panel)
-            <section class=classes!("side-window", panel_side_class,
-                content.is_none().then(|| "closed")) style="z-index: 2">
-            {
-                old.take().unwrap_or_else(|| content.take().unwrap_or(html!()))
-            }
-            </section>
-            // new panel (the one that gets swiped over the old one)
-            <section ontransitionend=transition_cb class=classes!("side-window",
-                (!do_switch).then(|| "closed"), panel_side_class, "switch-window") style="z-index: 1">
-            {
-                do_switch.then(|| content.take().unwrap()).unwrap_or(html!())
-            }
-            </section>
-
+            { content }
+            { slide }
         </>
     )
 }

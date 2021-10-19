@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 
-use log::info;
+use log::{error, info};
 use shared::ContactInfo;
 use yew::prelude::*;
 use yewtil::{ptr::Irc, NeqAssign};
@@ -78,7 +78,7 @@ impl Component for CreateChat {
     }
 
     fn change(&mut self, props: Self::Properties) -> ShouldRender {
-        info!("new props: {:?}", props.contacts);
+        info!("new props: {:?}", *props.contacts);
         self.props.neq_assign(props)
     }
 
