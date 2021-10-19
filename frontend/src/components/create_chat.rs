@@ -32,7 +32,8 @@ impl Component for CreateChat {
     type Properties = Props;
 
     fn create(props: Self::Properties, link: ComponentLink<Self>) -> Self {
-        if *props.contacts == None {
+        if props.contacts.is_none() {
+            info!("requesting contacts");
             props.contact_cb.emit(());
         }
         CreateChat {
@@ -78,7 +79,10 @@ impl Component for CreateChat {
     }
 
     fn change(&mut self, props: Self::Properties) -> ShouldRender {
-        info!("new props: {:?}", *props.contacts);
+        info!("contacts: {:?}", *props.contacts);
+        if props.contacts.is_none() {
+            self.props.contact_cb.emit(());
+        }
         self.props.neq_assign(props)
     }
 
