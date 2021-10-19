@@ -2,6 +2,7 @@ use std::collections::HashSet;
 
 use log::{error, info};
 use shared::ContactInfo;
+use web_sys::HtmlInputElement;
 use yew::prelude::*;
 use yewtil::{ptr::Irc, NeqAssign};
 
@@ -18,13 +19,14 @@ pub struct CreateChat {
     link: ComponentLink<Self>,
     props: Props,
     selected: HashSet<u32>,
-    group_name: String,
+    query: String,
+    group_name_input_ref: NodeRef,
 }
 
 pub enum Msg {
     Toggle(u32),
     Send,
-    OnChange(yew::ChangeData),
+    OnInputQuery(String),
 }
 
 impl Component for CreateChat {
@@ -40,7 +42,8 @@ impl Component for CreateChat {
             props,
             link,
             selected: HashSet::new(),
-            group_name: String::from("generic group"),
+            query: String::new(),
+            group_name_input_ref: NodeRef::default(),
         }
     }
 
@@ -60,20 +63,24 @@ impl Component for CreateChat {
                     self.props.create_chat_cb.emit(self.selected.clone());
                 } else if self.selected.len() > 1 {
                     info!("creating new group chat with users: {:?}", self.selected);
-                    self.props
-                        .create_group_chat_cb
-                        .emit((self.selected.clone(), self.group_name.clone()));
+                    let name = self
+                        .group_name_input_ref
+                        .cast::<HtmlInputElement>()
+                        .unwrap()
+                        .value();
+                    if !name.is_empty() {
+                        self.props
+                            .create_group_chat_cb
+                            .emit((self.selected.clone(), name));
+                    }
                 }
                 self.props.add_chat_close_cb.emit(());
                 true
             }
-            Msg::OnChange(change) => {
-                if let yew::ChangeData::Value(text) = change {
-                    if !text.trim().is_empty() {
-                        self.link.send_message(Msg::Send);
-                    }
-                }
-                false
+            Msg::OnInputQuery(change) => {
+                self.query = change;
+                info!("yeet");
+                true
             }
         }
     }
@@ -107,18 +114,22 @@ impl Component for CreateChat {
         let cb = self.props.add_chat_close_cb.clone();
         let close_cb: Callback<_> = (move |_| cb.emit(())).into();
 
+        let on_search_input = self
+            .link
+            .callback(|e: InputData| Msg::OnInputQuery(e.value));
+
         html! {
             <div class="create-chat">
                 <div class="search">
                     <button id="close" onclick=close_cb> <div class="icon arrow-back" /> </button>
-                    <input size="1" id="search-bar" type="text" />
+                    <input size="1" oninput=on_search_input id="search-bar" type="text" />
                     <button id="create-chat-button" onclick=send> <div class=classes!("icon", "send", "small", if self.selected.len() != 0 {"ok"} else {"err"}) /> </button>
                 </div>
 
                 <div class=classes!( if self.selected.len() > 1 {"open"} else {"closed"}, "wrapper") >
                     <div class="group-name">
                         <label for="search-bar">{"Group-name: "}</label>
-                        <input size="1" alt="Group name"/>
+                        <input ref=self.group_name_input_ref.clone() size="1" alt="Group name"/>
                     </div>
                 </div>
 
