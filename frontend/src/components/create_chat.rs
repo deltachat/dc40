@@ -70,20 +70,21 @@ impl Component for CreateChat {
                 if self.selected.len() == 1 {
                     info!("creating new 1o1 chat");
                     self.props.create_chat_cb.emit(self.selected.clone());
+                    self.props.add_chat_close_cb.emit(());
                 } else if self.selected.len() > 1 {
-                    info!("creating new group chat with users: {:?}", self.selected);
                     let name = self
                         .group_name_input_ref
                         .cast::<HtmlInputElement>()
                         .unwrap()
                         .value();
                     if !name.is_empty() {
+                        info!("creating new group chat with users: {:?}", self.selected);
                         self.props
                             .create_group_chat_cb
                             .emit((self.selected.clone(), name));
+                        self.props.add_chat_close_cb.emit(());
                     }
                 }
-                self.props.add_chat_close_cb.emit(());
                 true
             }
             Msg::OnInputQuery(change) => {
