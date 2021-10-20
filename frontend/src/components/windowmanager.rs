@@ -7,7 +7,6 @@ pub enum ChangePanel {
 }
 
 #[derive(Properties, Clone, PartialEq)]
-
 pub struct Props {
     pub left: Option<Html>,
     pub center: Option<Html>,
@@ -48,7 +47,6 @@ pub enum Msg {
 impl Component for WindowManager {
     type Message = Msg;
     type Properties = Props;
-
     fn create(mut props: Self::Properties, link: ComponentLink<Self>) -> Self {
         WindowManager {
             link,
@@ -77,7 +75,6 @@ impl Component for WindowManager {
             }
         }
     }
-
     fn change(&mut self, mut props: Self::Properties) -> ShouldRender {
         // Different view so we do a transition-effect
         if props.left_type != self.props.left_type {
@@ -96,6 +93,7 @@ impl Component for WindowManager {
             self.left = props.left.take();
             self.right = props.right.take();
             self.props = props;
+
         }
         true
     }
@@ -159,6 +157,7 @@ fn optional_side(
         <>
             { content }
             { slide }
+
         </>
     )
 }

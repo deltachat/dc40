@@ -184,7 +184,6 @@ impl App {
               <div>{"No chat selected"}</div>
             }
         };
-
         let load_contacts = link.callback(|_| Msg::WsRequest(Request::GetContacts));
         let create_chat_cb = link.callback(|users| Msg::WsRequest(Request::CreateChat(users)));
         let create_group_chat_cb =
