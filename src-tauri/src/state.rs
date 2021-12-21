@@ -461,25 +461,43 @@ impl LocalState {
         }
     }
 
-    pub async fn create_chat(&self, contacts: HashSet<u32>) -> Result<()> {
+    pub async fn create_chat(&self, contacts: HashSet<u32>) -> Result<Response> {
         let ls = self.inner.read().await;
-        if let Some((_, ctx)) = ls.get_selected_account().await {
-            ChatId::create_for_contact(&ctx, *contacts.iter().next().unwrap()).await?;
+        if let Some((acc, ctx)) = ls.get_selected_account().await {
+            let chat = ChatId::create_for_contact(&ctx, *contacts.iter().next().unwrap()).await?;
+            acc.select_chat(&ctx, chat).await?;
+            let (chat_id, range, items, messages) = acc.load_message_list(&ctx, None).await?;
+            Ok(Response::MessageList {
+                chat_id,
+                range,
+                items,
+                messages,
+            })
+        } else {
+            Err(anyhow!("no selected account"))
         }
-        Ok(())
     }
 
-    pub async fn create_group_chat(&self, contacts: HashSet<u32>, chat_name: &str) -> Result<()> {
+    pub async fn create_group_chat(&self, contacts: HashSet<u32>, chat_name: &str) -> Result<Response> {
         let ls = self.inner.read().await;
-        if let Some((_, ctx)) = ls.get_selected_account().await {
-            let chat_id =
+        if let Some((acc, ctx)) = ls.get_selected_account().await {
+            let chat =
                 chat::create_group_chat(&ctx, ProtectionStatus::Unprotected, chat_name).await?;
 
             for contact in contacts {
-                chat::add_contact_to_chat(&ctx, chat_id, contact).await;
+                chat::add_contact_to_chat(&ctx, chat, contact).await;
             }
+            acc.select_chat(&ctx, chat).await?;
+            let (chat_id, range, items, messages) = acc.load_message_list(&ctx, None).await?;
+            Ok(Response::MessageList {
+                chat_id,
+                range,
+                items,
+                messages,
+            })
+        } else {
+            Err(anyhow!("no selected account"))
         }
-        Ok(())
     }
 
     pub async fn block_contact(&self, account_id: u32, chat_id: u32) -> Result<()> {

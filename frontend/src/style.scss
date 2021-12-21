@@ -103,6 +103,7 @@ body {
   display: flex;
   flex-direction: column;
   height: 100%;
+  width: 100%;
   background-color: #0a1d3b;
 
   #new_chat_button {
@@ -256,6 +257,7 @@ body {
 }
 
 .normal-panel {
+  width: 100%;
   display: flex;
 }
 
