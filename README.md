@@ -1,5 +1,7 @@
 # dc40
 
+dc40 has no active development atm, we rather focuse on [dreamer](https://github.com/dignifiedquire/dreamer) which is a pure rust experimental desktop client for deltachat using egui.
+
 ## Development Dependencies
 
 - [`rustup`](https://rustup.rs/)
