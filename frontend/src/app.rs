@@ -12,13 +12,15 @@ use yewtil::{
 
 use shared::*;
 
+use crate::components::windowmanager::{ChangePanel, LeftPanel};
 use crate::components::{
     chat::Chat,
     chatlist::Chatlist,
+    create_chat::CreateChat,
     messages::Props as MessagesProps,
     modal::Modal,
     sidebar::Sidebar,
-    windowmanager::{Props as FileManagerProps, WindowManager},
+    windowmanager::{Props as WindowManagerProps, WindowManager},
 };
 
 #[derive(Debug)]
@@ -34,9 +36,11 @@ pub enum Msg {
     WsAction(WsAction),
     WsReady(Result<Response, Error>),
     WsRequest(Request),
+    CreateChat,
     ShowAccountCreation,
     CancelAccountCreation,
     AccountCreation(String, String),
+    ChangePanel(ChangePanel),
 }
 
 impl From<WsAction> for Msg {
@@ -66,6 +70,8 @@ struct Model {
     message_items: Mrc<Vec<ChatItem>>,
     messages: Mrc<Vec<ChatMessage>>,
     show_account_creation: bool,
+    left_panel: LeftPanel,
+    contacts: Mrc<Option<Vec<ContactInfo>>>,
 }
 
 impl App {
@@ -104,6 +110,8 @@ impl App {
         let unarchive_chat_callback = link.callback(move |(account, chat_id)| {
             Msg::WsRequest(Request::UnarchiveChat { account, chat_id })
         });
+
+        let create_chat_callback = link.callback(|_| Msg::CreateChat);
 
         let create_account_callback = link.callback(move |_| Msg::ShowAccountCreation);
         let cancel_account_create_callback = link.callback(move |_| Msg::CancelAccountCreation);
@@ -176,35 +184,60 @@ impl App {
               <div>{"No chat selected"}</div>
             }
         };
+        let load_contacts = link.callback(|_| Msg::WsRequest(Request::GetContacts));
+        let create_chat_cb = link.callback(|users| Msg::WsRequest(Request::CreateChat(users)));
+        let create_group_chat_cb =
+            link.callback(|(users, name)| Msg::WsRequest(Request::CreateGroupChat(users, name)));
+        let add_chat_close_cb =
+            link.callback(|_| Msg::ChangePanel(ChangePanel::Left(LeftPanel::Chats)));
 
-        let file_manager_props = props! {
-            FileManagerProps {
-                left: html!(
+        let left = match self.model.left_panel {
+            LeftPanel::Chats => {
+                html!(
                     <div class="normal-panel">
                         <Sidebar
-                        accounts=self.model.accounts.irc()
-                        selected_account=self.model.selected_account.irc()
-                        select_account_callback=select_account_callback
-                        create_account_callback=create_account_callback
-                        />
-                    <Chatlist
-                        selected_account=self.model.selected_account.irc()
-                        selected_account_details=account_details
-                        selected_chat_id=self.model.selected_chat_id.irc()
-                        selected_chat=self.model.selected_chat.irc()
-                        selected_chat_length=self.model.selected_chat_length.irc()
-                        select_chat_callback=select_chat_callback
-                        pin_chat_callback=pin_chat_callback
-                        unpin_chat_callback=unpin_chat_callback
-                        archive_chat_callback=archive_chat_callback
-                        unarchive_chat_callback=unarchive_chat_callback
-                        chats=self.model.chats.irc()
-                        chats_range=self.model.chats_range.irc()
-                        chats_len=self.model.chats_len.irc()
-                        fetch_callback=chats_fetch_callback />
-                    </div>),
+                            accounts=self.model.accounts.irc()
+                            selected_account=self.model.selected_account.irc()
+                            select_account_callback=select_account_callback
+                            create_account_callback=create_account_callback/>
+
+                        <Chatlist
+                            selected_account=self.model.selected_account.irc()
+                            selected_account_details=account_details
+                            selected_chat_id=self.model.selected_chat_id.irc()
+                            selected_chat=self.model.selected_chat.irc()
+                            selected_chat_length=self.model.selected_chat_length.irc()
+                            select_chat_callback=select_chat_callback
+                            pin_chat_callback=pin_chat_callback
+                            unpin_chat_callback=unpin_chat_callback
+                            archive_chat_callback=archive_chat_callback
+                            unarchive_chat_callback=unarchive_chat_callback
+                            chats=self.model.chats.irc()
+                            chats_range=self.model.chats_range.irc()
+                            chats_len=self.model.chats_len.irc()
+                            fetch_callback=chats_fetch_callback
+                            create_chat_callback=create_chat_callback/>
+                    </div>
+                )
+            }
+            LeftPanel::NewChat => {
+                html! {
+                    <CreateChat
+                        create_group_chat_cb=create_group_chat_cb
+                        create_chat_cb=create_chat_cb
+                        contacts=self.model.contacts.irc()
+                        contact_cb=load_contacts
+                        add_chat_close_cb=add_chat_close_cb />
+                }
+            }
+        };
+
+        let file_manager_props = props! {
+            WindowManagerProps {
+                left,
                 center: messages,
-                right: None
+                right: None,
+                left_type: self.model.left_panel.clone()
             }
         };
 
@@ -388,6 +421,11 @@ impl Component for App {
                             _ => {}
                         }
                     }
+                    Response::Contacts(contacts) => {
+                        error!("received contacts");
+                        self.model.contacts = Mrc::new(Some(contacts));
+                        return true;
+                    }
                 },
                 Err(err) => {
                     warn!("{:#?}", err);
@@ -410,6 +448,18 @@ impl Component for App {
                 let msg = Msg::WsRequest(Request::Login { email, password });
                 self.link.send_message(msg);
                 self.model.show_account_creation = false;
+                return true;
+            }
+            Msg::CreateChat => {
+                self.link
+                    .send_message(Msg::ChangePanel(ChangePanel::Left(LeftPanel::NewChat)));
+            }
+            Msg::ChangePanel(side) => {
+                match side {
+                    ChangePanel::Left(panel) => self.model.left_panel = panel,
+                    ChangePanel::Center => todo!(),
+                    ChangePanel::Right => todo!(),
+                }
                 return true;
             }
         }

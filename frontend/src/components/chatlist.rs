@@ -23,6 +23,7 @@ pub struct Props {
     pub chats_range: Irc<(usize, usize)>,
     pub chats_len: Irc<usize>,
     pub fetch_callback: Callback<(usize, usize)>,
+    pub create_chat_callback: Callback<()>,
 }
 
 pub struct Chatlist {
@@ -118,6 +119,10 @@ impl Component for Chatlist {
                 <div>{details.email.clone()}</div>
             };
         };
+
+        let create_chat_cb = self.props.create_chat_callback.clone();
+        let onclick: Callback<_> = (move |_| create_chat_cb.emit(())).into();
+
         html! {
             <div class="chats">
                 <div class="account-header">
@@ -136,7 +141,8 @@ impl Component for Chatlist {
                     render_element=render_element
                     auto_scroll=false
                     batch_size=10 />
-              </div>
+            <button id="new_chat_button" onclick=onclick> {"+"} </button>
+            </div>
         }
     }
 }
@@ -213,6 +219,7 @@ impl Component for Chat {
                 <div class="chat-badge">
                     { badge }
                 </div>
+
             </div>
         }
     }

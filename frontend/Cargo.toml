@@ -4,9 +4,6 @@ version = "0.1.0"
 authors = ["digifiedquire"]
 edition = "2018"
 
-[lib]
-crate-type = ["cdylib", "rlib"]
-
 [dependencies]
 log = "0.4"
 strum = "0.20"
@@ -27,7 +24,7 @@ yew_form = { git = "https://github.com/dignifiedquire/yew_form", branch = "yew-1
 yew_form_derive = { git = "https://github.com/dignifiedquire/yew_form", branch = "yew-18"}
 validator = "0.14"
 validator_derive = "0.14"
-
+itertools = "0.10.1"
 
 [dependencies.web-sys]
 version = "0.3.4"

@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 
 use chrono::{DateTime, Utc};
@@ -30,6 +30,14 @@ pub enum Response {
         account: u32,
         event: Event,
     },
+    Contacts(Vec<ContactInfo>),
+}
+
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
+pub struct ContactInfo {
+    pub id: u32,
+    pub display_name: String,
+    pub mail: String,
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
@@ -209,6 +217,9 @@ pub enum Request {
         account: u32,
         chat_id: u32,
     },
+    GetContacts,
+    CreateChat(HashSet<u32>),
+    CreateGroupChat(HashSet<u32>, String),
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, FromPrimitive, ToPrimitive)]

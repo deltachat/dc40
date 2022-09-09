@@ -1,0 +1,103 @@
+@import "./variables";
+
+
+.create-chat {
+    background-color: $darkBlue;
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+
+    .search {
+        display: flex;
+        border-bottom: 1px solid $gray;
+        padding: 0.7em;
+        #search-bar {
+            flex-grow: 1;
+            border: none;
+            padding: 2px;
+            border-bottom: 1px solid white;
+            color: white;
+            background: $darkBlue;
+            font-size: 1.2em;
+            margin: 0px 0.7em;
+        }
+
+        &> button {
+            border: 1px solid $gray;
+            background-color: $darkerBlue;
+            border-radius: 4px;
+            color: white;
+            cursor: pointer;
+        }
+        #close {
+            &> div {
+                display: flex;
+                background-color: #ffffff;
+                color: white
+            }
+        }
+        #create-chat-button {
+            display: flex;
+            align-items: center;
+            .ok {
+                background-color: white;
+
+            }
+            .err {
+                background-color: gray;
+            }
+        }
+    }
+        
+    
+    .wrapper {
+        // transition: all 0.2s ease-in; pls fix
+        border-bottom: 1px solid $gray;
+
+    }
+    .group-name {
+        padding: 0.7em;        
+        padding-top: 0.5em;
+        &>label {
+            color: white;
+            font-size: 0.8em;
+            margin-right: 0.3em;
+        }
+        &>input {
+            font-size: 1.2em;
+            border: none;
+            border-bottom: 1px solid white;
+            background: $darkBlue;
+            display: block;
+            width: 100%;
+            color: white;
+        }
+    }
+    .closed {
+        overflow-y: hidden;
+        max-height: 0px;
+    }
+    .open {
+        max-height: 100%;
+    }
+    .contact-list{
+        color: white;
+        overflow-y: scroll;
+        .contact {
+            padding: 0.5em;
+            border-bottom: 1px solid gray;
+            &> p {
+                margin: 0.2em 0px;
+                overflow-x: hidden;
+            }
+            &> h2 {
+                overflow-x: hidden;
+                margin: 0.2em 0px;
+
+            } 
+        }
+        .selected {
+            background-color: $hoverBlue;
+        }
+    }
+}

@@ -227,6 +227,17 @@ where
         Request::GetAccountDetail { id } => {
             local_state.send_account_details(id, writer).await?;
         }
+        Request::GetContacts => local_state.send_contacts(writer).await?,
+        Request::CreateChat(contacts) => {
+            let resp = local_state.create_chat(contacts).await?;
+            local_state.send_update(writer.clone()).await?;
+            send(writer.clone(), resp).await?;
+        }
+        Request::CreateGroupChat(contacts, chat_name) => {
+            let resp = local_state.create_group_chat(contacts, &chat_name).await?;
+            local_state.send_update(writer.clone()).await?;
+            send(writer.clone(), resp).await?;
+        }
     }
     Ok(())
 }

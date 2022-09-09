@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use anyhow::{anyhow, Result};
 use async_std::sync::{Arc, RwLock};
@@ -6,10 +6,14 @@ use async_std::task;
 use async_std::{path::Path, prelude::*};
 use async_tungstenite::tungstenite::{Error, Message};
 use broadcaster::BroadcastChannel;
-use deltachat::chat::{Chat, ChatId};
+use deltachat::chat::{self, Chat, ChatId, ProtectionStatus};
+use deltachat::contact::Contact;
 use deltachat::context::Context;
 use deltachat::{message, EventType};
+use futures::future::join_all;
 use futures::sink::SinkExt;
+use futures::stream::{self, StreamExt};
+use itertools::Itertools;
 use log::*;
 use num_traits::FromPrimitive;
 use shared::*;
@@ -457,6 +461,45 @@ impl LocalState {
         }
     }
 
+    pub async fn create_chat(&self, contacts: HashSet<u32>) -> Result<Response> {
+        let ls = self.inner.read().await;
+        if let Some((acc, ctx)) = ls.get_selected_account().await {
+            let chat = ChatId::create_for_contact(&ctx, *contacts.iter().next().unwrap()).await?;
+            acc.select_chat(&ctx, chat).await?;
+            let (chat_id, range, items, messages) = acc.load_message_list(&ctx, None).await?;
+            Ok(Response::MessageList {
+                chat_id,
+                range,
+                items,
+                messages,
+            })
+        } else {
+            Err(anyhow!("no selected account"))
+        }
+    }
+
+    pub async fn create_group_chat(&self, contacts: HashSet<u32>, chat_name: &str) -> Result<Response> {
+        let ls = self.inner.read().await;
+        if let Some((acc, ctx)) = ls.get_selected_account().await {
+            let chat =
+                chat::create_group_chat(&ctx, ProtectionStatus::Unprotected, chat_name).await?;
+
+            for contact in contacts {
+                chat::add_contact_to_chat(&ctx, chat, contact).await;
+            }
+            acc.select_chat(&ctx, chat).await?;
+            let (chat_id, range, items, messages) = acc.load_message_list(&ctx, None).await?;
+            Ok(Response::MessageList {
+                chat_id,
+                range,
+                items,
+                messages,
+            })
+        } else {
+            Err(anyhow!("no selected account"))
+        }
+    }
+
     pub async fn block_contact(&self, account_id: u32, chat_id: u32) -> Result<()> {
         let ls = self.inner.write().await;
         if let Some(account) = ls.account_states.get(&account_id) {
@@ -486,6 +529,38 @@ impl LocalState {
                     })
                 }
             }
+        } else {
+            Err(anyhow!("no selected account"))
+        }
+    }
+
+    pub async fn send_contacts<T>(&self, writer: Arc<RwLock<T>>) -> Result<()>
+    where
+        T: futures::sink::Sink<Message> + Unpin + Sync + Send + 'static,
+        T::Error: std::fmt::Debug + std::error::Error + Send + Sync,
+    {
+        let ls = self.inner.read().await;
+        if let Some((_, ctx)) = ls.get_selected_account().await {
+            let query: Option<&'static str> = None;
+            let contact_ids = deltachat::contact::Contact::get_all(&ctx, 0, query).await?;
+            info!("Contact-list: {:?}", contact_ids);
+            let contacts = stream::iter(contact_ids)
+                .then(|id| Contact::load_from_db(&ctx, id))
+                .filter_map(|contact| async {
+                    match contact {
+                        Ok(contact) => Some(ContactInfo {
+                            id: contact.id,
+                            mail: contact.get_addr().to_owned(),
+                            display_name: contact.get_display_name().to_owned(),
+                        }),
+                        Err(_) => None,
+                    }
+                })
+                .collect::<Vec<ContactInfo>>()
+                .await;
+
+            send(writer, Response::Contacts(contacts)).await?;
+            Ok(())
         } else {
             Err(anyhow!("no selected account"))
         }
